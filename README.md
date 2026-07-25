@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ai-travel-agent
 
-## Getting Started
+[![PR Checks](https://github.com/taejin5314/ai-travel-agent/actions/workflows/pr-checks.yml/badge.svg)](https://github.com/taejin5314/ai-travel-agent/actions/workflows/pr-checks.yml)
 
-First, run the development server:
+An AI trip-planning web app, first supporting **Osaka & Kyoto**. Given travel
+dates, lodging, party size, must-visit places, interests, pace and constraints,
+it produces a validated day-by-day itinerary using real place data, travel
+times, opening-hours checks, and must-visit coverage.
+
+> **Status:** building the safe, automatable development foundation.
+> The AI trip-planning features are not implemented yet.
+
+## Tech stack
+
+- Next.js 16 (App Router) · React 19 · TypeScript (strict)
+- Tailwind CSS 4
+- Vitest for unit tests
+- Zod for runtime validation of all external/model data
+- pnpm
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Local dev server |
+| `pnpm build` | Production build |
+| `pnpm typecheck` | `tsc --noEmit` (strict) |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest (CI mode) |
+| `pnpm test:watch` | Vitest watch mode |
+| `pnpm coverage` | Vitest with coverage |
+| `pnpm verify` | typecheck + lint + test + build (run before every PR) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture
 
-## Learn More
+Layered, with a strict inward dependency direction. See
+[AGENTS.md](./AGENTS.md) for the full rules.
 
-To learn more about Next.js, take a look at the following resources:
+```
+app → agent → providers(ports) → domain
+       └──────── validators ─────┘
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/domain` — pure types + Zod schemas
+- `src/validators` — deterministic time/conflict/opening-hours checks (no LLM)
+- `src/providers` — external adapters behind interfaces (mock now; Google/LLM later)
+- `src/agent` — AI workflow + prompts (later)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Development workflow
 
-## Deploy on Vercel
+All changes go through a branch and a Pull Request — **`main` is protected and
+cannot be pushed to directly.** CI runs typecheck, lint, test and build on every
+PR. Production is deployed only by an explicit human **Promote to Production** in
+Vercel, never automatically.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The authoritative rules for humans and AI agents live in **[AGENTS.md](./AGENTS.md)**.

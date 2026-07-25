@@ -1,0 +1,83 @@
+name: "🤖 Agent task"
+description: "A work order for an AI coding agent. Fill every section — the agent treats this as its spec."
+title: "[task]: "
+labels: ["agent:ready"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is the agent's specification. Be concrete. The agent must read
+        AGENTS.md, implement the smallest change, add tests, run `pnpm verify`,
+        and open a **Draft PR** — it must never push to `main` or merge itself.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is wrong or missing today, and why it matters.
+      placeholder: "Today there is no ... which means ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should be true after this task is done.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist the PR must satisfy. Keep each item verifiable.
+      value: |
+        - [ ] ...
+        - [ ] `pnpm verify` passes (typecheck + lint + test + build)
+        - [ ] Tests added/updated (none deleted or weakened)
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: Explicitly out of scope. Prevents scope creep.
+      placeholder: "- Do NOT touch ...\n- Do NOT add ..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk level
+      options:
+        - "low — docs, copy, isolated pure code"
+        - "medium — UI or domain logic, no external calls"
+        - "high — auth/payments/data-deletion/migrations/secrets (human approval required)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Recommended agent
+      options:
+        - "claude (default)"
+        - "general-purpose"
+        - "other (specify in problem)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails acknowledged
+      options:
+        - label: "No direct push to main; open a Draft PR from a branch."
+          required: true
+        - label: "Do not delete or weaken tests; do not disable strict/lint to pass."
+          required: true
+        - label: "Stop after 2 failed fix attempts and report the blocker."
+          required: true
