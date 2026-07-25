@@ -61,3 +61,4 @@ PR. Production is deployed only by an explicit human **Promote to Production** i
 Vercel, never automatically.
 
 The authoritative rules for humans and AI agents live in **[AGENTS.md](./AGENTS.md)**.
+New here? Start with **[CONTRIBUTING.md](./CONTRIBUTING.md)**.
