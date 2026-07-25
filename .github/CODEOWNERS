@@ -1,0 +1,15 @@
+# Code owners — these paths get extra human review.
+# NOTE: Branch protection currently does NOT hard-require code-owner approval
+# (solo repo: the author cannot approve their own PR). CODEOWNERS auto-requests
+# review as a signal. When AI commits move to a separate bot identity, flip
+# `require_code_owner_review` back on in the main ruleset to make it a hard gate.
+
+# Default owner for everything
+*                       @taejin5314
+
+# Safety-critical: governance, CI, and tests must not be silently changed
+/AGENTS.md              @taejin5314
+/CLAUDE.md              @taejin5314
+/.github/               @taejin5314
+/tests/                 @taejin5314
+/vitest.config.ts       @taejin5314
