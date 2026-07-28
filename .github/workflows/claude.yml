@@ -53,5 +53,10 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # AGENTS.md is the source of truth; remind the agent of the two
           # rules it cannot infer from a fresh checkout's context alone.
+          # allowedTools: run 30369892237 showed the sandbox blocks pnpm/gh by
+          # default, so the agent could not self-verify or open its Draft PR.
+          # Allowlist exactly those — install, verify, draft-PR — and nothing
+          # destructive (no publish, no merge, no gh api).
           claude_args: |
-            --append-system-prompt "Follow AGENTS.md strictly: open Draft PRs only, never merge, and stop after 2 failed fix attempts and report instead."
+            --append-system-prompt "Follow AGENTS.md strictly: open Draft PRs only (gh pr create --draft), never merge, run pnpm verify before opening the PR, and stop after 2 failed fix attempts and report instead."
+            --allowedTools "Bash(pnpm install:*),Bash(pnpm verify),Bash(pnpm typecheck),Bash(pnpm lint),Bash(pnpm test),Bash(pnpm build),Bash(gh pr create:*)"
