@@ -1,0 +1,73 @@
+# Claude reviewer — automatic AI code review on every ready PR.
+#
+# The cross-feedback half of the AI pipeline: the implementer bot (claude.yml)
+# writes code; this workflow has a SEPARATE Claude instance review the diff
+# against AGENTS.md and post inline comments + a summary verdict.
+#
+# Loop safety (AGENTS.md §3):
+# - This reviewer can only COMMENT — contents permission is read-only, so it
+#   can never edit code, push, or merge.
+# - The implementer only reacts to @claude mentions from the human owner, so
+#   reviewer comments can never trigger it. Every review→fix cycle passes
+#   through a human relaying the feedback.
+name: Claude Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read         # read the diff — never write code
+  pull-requests: write   # inline review comments + summary
+  issues: read
+  id-token: write        # OIDC for the Claude GitHub App
+  actions: read
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Drafts are work-in-progress — review only when the author says ready.
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            You are the review half of an AI implement/review pair. Review this
+            pull request's diff strictly against AGENTS.md (repo root). Focus on:
+
+            1. Layer boundaries: domain imports nothing from other layers;
+               nothing imports against the dependency arrows; UI never calls
+               providers/external APIs directly.
+            2. Golden rules §3: no weakened tests, no @ts-ignore/eslint-disable
+               to silence real problems, no secrets, no `any`.
+            3. Untrusted-input rule: external/LLM data must pass Zod at the
+               providers boundary; time/date/conflict logic must be plain TS in
+               validators, never an LLM.
+            4. Test quality: new behavior tested, both pass AND fail cases
+               asserted, deterministic (no real network/clock).
+            5. Real bugs: incorrect logic, edge cases (date math, timezone,
+               empty arrays, unicode/trimming), type unsoundness.
+
+            Post specific, actionable inline comments on the exact lines using
+            the inline-comment tool. Then post ONE summary comment ending with
+            a verdict line: "VERDICT: APPROVE" or "VERDICT: NEEDS CHANGES",
+            plus a short list of must-fix vs nice-to-have items. Be concise —
+            skip style nitpicks that a linter would catch. Do not request
+            changes for things AGENTS.md does not require.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*)"
