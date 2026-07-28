@@ -1,0 +1,56 @@
+# Claude implementer — responds to @claude mentions from the repo owner.
+#
+# Phone-driven flow: open/comment on an issue or PR from the GitHub mobile
+# app with "@claude ..." and Claude Code runs here, implements the change,
+# and opens/updates a branch + PR.
+#
+# Safety (AGENTS.md §3):
+# - Only fires for the human repo owner — never for bots, so Claude and any
+#   reviewer bot (e.g. Codex) can NEVER trigger each other in a loop.
+# - main is branch-protected; this action can only push side branches.
+# - It cannot merge PRs, deploy, or change rulesets.
+name: Claude
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
+
+jobs:
+  claude:
+    # Human-owner gate + @claude mention gate.
+    if: |
+      github.actor == 'taejin5314' &&
+      (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+        (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write        # push side branches (main is protected)
+      pull-requests: write   # open/update PRs, comment progress
+      issues: write          # comment on the triggering issue
+      id-token: write        # OIDC for the Claude GitHub App
+      actions: read          # read CI results on the PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # AGENTS.md is the source of truth; remind the agent of the two
+          # rules it cannot infer from a fresh checkout's context alone.
+          claude_args: |
+            --append-system-prompt "Follow AGENTS.md strictly: open Draft PRs only, never merge, and stop after 2 failed fix attempts and report instead."
