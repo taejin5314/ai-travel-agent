@@ -37,7 +37,15 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                     key={`${day.date}-${item.start}`}
                     className="flex justify-between gap-4"
                   >
-                    <span>{item.placeName}</span>
+                    <span>
+                      {item.kind === "meal" ? "🍽️ " : ""}
+                      {item.placeName}
+                      {item.rating !== undefined && (
+                        <span className="ml-1 text-xs text-zinc-500">
+                          ★ {item.rating.toFixed(1)}
+                        </span>
+                      )}
+                    </span>
                     <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
                       {item.start}–{item.end}
                     </span>

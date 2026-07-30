@@ -10,6 +10,8 @@ export const PlaceCategorySchema = z.enum([
   "nature",
   "culture",
   "entertainment",
+  "restaurant",
+  "lodging",
 ]);
 
 const OpeningHoursEntrySchema = z
@@ -43,6 +45,9 @@ export const PlaceSchema = z.object({
   }),
   openingHours: OpeningHoursSchema,
   typicalVisitMinutes: z.number().int().positive(),
+  /** Average review score, 0-5. Optional until every data source provides it. */
+  rating: z.number().min(0).max(5).optional(),
+  reviewCount: z.number().int().nonnegative().optional(),
 });
 
 export type Place = z.infer<typeof PlaceSchema>;
