@@ -7,10 +7,23 @@ const MIN_PARTY_SIZE = 1;
 const MAX_PARTY_SIZE = 20;
 const MAX_TRIP_LENGTH_DAYS = 30;
 
+/** Raw (untrimmed-safe) field strings, used to re-populate the form after a failed submission. */
+export type PlanFormValues = {
+  startDate: string;
+  endDate: string;
+  lodgingName: string;
+  lodgingArea: string;
+  partySize: string;
+  mustVisit: string;
+  interests: string;
+  pace: string;
+  constraints: string;
+};
+
 export type PlanFormState =
   | { status: "idle" }
   | { status: "success"; data: TripPreferences }
-  | { status: "error"; errors: string[] };
+  | { status: "error"; errors: string[]; values: PlanFormValues };
 
 export const initialPlanFormState: PlanFormState = { status: "idle" };
 
@@ -58,6 +71,21 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
     interests: splitEntries(getString(formData, "interests")),
     pace: getString(formData, "pace"),
     constraints: constraints.length > 0 ? constraints : undefined,
+  };
+}
+
+/** Extracts raw submitted field strings so the form can restore them after a failed submission. */
+export function extractFormValues(formData: FormData): PlanFormValues {
+  return {
+    startDate: getString(formData, "startDate"),
+    endDate: getString(formData, "endDate"),
+    lodgingName: getString(formData, "lodgingName"),
+    lodgingArea: getString(formData, "lodgingArea"),
+    partySize: getString(formData, "partySize"),
+    mustVisit: getString(formData, "mustVisit"),
+    interests: getString(formData, "interests"),
+    pace: getString(formData, "pace"),
+    constraints: getString(formData, "constraints"),
   };
 }
 

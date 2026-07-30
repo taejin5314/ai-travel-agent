@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTripPreferencesCandidate,
+  extractFormValues,
   translateSchemaErrors,
   translateValidationErrors,
 } from "@/app/plan/formPreferences";
@@ -76,6 +77,26 @@ describe("buildTripPreferencesCandidate", () => {
     const candidate = buildTripPreferencesCandidate(buildFormData(validFields));
     const result = TripPreferencesSchema.safeParse(candidate);
     expect(result.success).toBe(true);
+  });
+});
+
+describe("extractFormValues", () => {
+  it("returns the raw submitted strings, unsplit, for restoring the form after an error", () => {
+    const values = extractFormValues(
+      buildFormData({ ...validFields, mustVisit: " Osaka Castle ,\nDotonbori,, " }),
+    );
+
+    expect(values).toEqual({
+      startDate: "2026-08-01",
+      endDate: "2026-08-05",
+      lodgingName: "Hotel Osaka",
+      lodgingArea: "Namba",
+      partySize: "2",
+      mustVisit: "Osaka Castle ,\nDotonbori,,",
+      interests: "food\nshopping",
+      pace: "balanced",
+      constraints: "",
+    });
   });
 });
 

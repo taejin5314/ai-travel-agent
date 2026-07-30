@@ -4,6 +4,7 @@ import { TripPreferencesSchema } from "@/domain/schema/tripPreferences";
 import { validateTripPreferences } from "@/validators/tripPreferences";
 import {
   buildTripPreferencesCandidate,
+  extractFormValues,
   translateSchemaErrors,
   translateValidationErrors,
   type PlanFormState,
@@ -13,11 +14,16 @@ export async function submitTripPreferences(
   _prevState: PlanFormState,
   formData: FormData,
 ): Promise<PlanFormState> {
+  const values = extractFormValues(formData);
   const candidate = buildTripPreferencesCandidate(formData);
   const parsed = TripPreferencesSchema.safeParse(candidate);
 
   if (!parsed.success) {
-    return { status: "error", errors: translateSchemaErrors(parsed.error) };
+    return {
+      status: "error",
+      errors: translateSchemaErrors(parsed.error),
+      values,
+    };
   }
 
   const validation = validateTripPreferences(parsed.data);
@@ -25,6 +31,7 @@ export async function submitTripPreferences(
     return {
       status: "error",
       errors: translateValidationErrors(validation.errors),
+      values,
     };
   }
 
