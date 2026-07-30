@@ -21,6 +21,9 @@ export type PlanTripResult =
 const DAY_START_MINUTES = 9 * 60 + 30;
 const DAY_END_MINUTES = 18 * 60 + 30;
 const MAX_WALK_MINUTES = 20;
+const LUNCH_START_MINUTES = 12 * 60;
+const DINNER_START_MINUTES = 17 * 60 + 30;
+const MEAL_HARD_END_MINUTES = 20 * 60;
 
 export const PACE_MAX_ACTIVITIES_PER_DAY: Record<
   TripPreferences["pace"],
@@ -72,7 +75,19 @@ const INTEREST_KEYWORDS: Record<Place["category"], readonly string[]> = {
   nature: ["nature", "자연", "공원"],
   culture: ["culture", "문화", "역사", "사찰", "신사"],
   entertainment: ["entertainment", "엔터테인먼트", "놀이공원", "테마파크"],
+  // Meal slots and lodging are scheduled structurally, not via interests.
+  restaurant: [],
+  lodging: [],
 };
+
+function ratingOf(place: Place): number {
+  return place.rating ?? 0;
+}
+
+/** Higher rating first; stable for equal ratings (keeps fixture order). */
+function byRatingDesc(a: Place, b: Place): number {
+  return ratingOf(b) - ratingOf(a);
+}
 
 export function mapInterestsToCategories(
   interests: readonly string[],
@@ -143,26 +158,106 @@ export async function planTrip(
   }
 
   const interestCategories = mapInterestsToCategories(preferences.interests);
-  const queuedIds = new Set(mustVisitPlaces.map((p) => p.id));
-  const interestPlaces = catalog.filter(
-    (p) => !queuedIds.has(p.id) && interestCategories.has(p.category),
+  const attractions = catalog.filter(
+    (p) => p.category !== "restaurant" && p.category !== "lodging",
   );
+  const mustVisitIds = new Set(mustVisitPlaces.map((p) => p.id));
+  // Restaurants are a separate pool for meal slots; a must-visit restaurant
+  // is scheduled as a regular stop instead, never twice.
+  const restaurants = catalog
+    .filter((p) => p.category === "restaurant" && !mustVisitIds.has(p.id))
+    .sort(byRatingDesc);
+  const usedRestaurantIds = new Set<string>();
+
+  // Anchor days at the lodging when the entered name matches the catalog.
+  // Free text stays supported: an unknown lodging just plans without anchor.
+  const lodgingPlace = (
+    await ports.places.findPlacesByName(preferences.lodging.name)
+  ).find((p) => p.category === "lodging");
+
+  const queuedIds = new Set(mustVisitPlaces.map((p) => p.id));
+  const interestPlaces = attractions
+    .filter((p) => !queuedIds.has(p.id) && interestCategories.has(p.category))
+    .sort(byRatingDesc);
   for (const p of interestPlaces) {
     queuedIds.add(p.id);
   }
-  const otherPlaces = catalog.filter((p) => !queuedIds.has(p.id));
+  const otherPlaces = attractions
+    .filter((p) => !queuedIds.has(p.id))
+    .sort(byRatingDesc);
 
   const queue: Place[] = [...mustVisitPlaces, ...interestPlaces, ...otherPlaces];
   const maxPerDay = PACE_MAX_ACTIVITIES_PER_DAY[preferences.pace];
+
+  // Top-rated open restaurant, preferring the current area and unvisited
+  // options; falls back to revisiting one on long trips.
+  async function scheduleMeal(
+    dayOfWeek: number,
+    clock: number,
+    previous: Place | undefined,
+    earliest: number,
+  ): Promise<{ activity: Activity; place: Place; end: number } | null> {
+    const unused = restaurants.filter((r) => !usedRestaurantIds.has(r.id));
+    const pool = [
+      ...unused.filter((r) => previous !== undefined && r.area === previous.area),
+      ...unused.filter((r) => previous === undefined || r.area !== previous.area),
+      ...restaurants.filter((r) => usedRestaurantIds.has(r.id)),
+    ];
+    for (const candidate of pool) {
+      const window = candidate.openingHours[dayOfWeek];
+      if (window === null) {
+        continue;
+      }
+      const travel =
+        previous === undefined
+          ? 0
+          : await travelBetween(ports.routes, previous, candidate);
+      const start = Math.max(clock + travel, earliest, timeToMinutes(window.open));
+      const end = start + candidate.typicalVisitMinutes;
+      if (end > Math.min(timeToMinutes(window.close), MEAL_HARD_END_MINUTES)) {
+        continue;
+      }
+      usedRestaurantIds.add(candidate.id);
+      return {
+        activity: {
+          placeId: candidate.id,
+          start: minutesToTime(start),
+          end: minutesToTime(end),
+        },
+        place: candidate,
+        end,
+      };
+    }
+    return null;
+  }
 
   const days: DayPlan[] = [];
   for (const date of enumerateDates(preferences.startDate, preferences.endDate)) {
     const dayOfWeek = weekdayIndex(date);
     const activities: Activity[] = [];
     let clock = DAY_START_MINUTES;
-    let previous: Place | undefined;
+    let previous: Place | undefined = lodgingPlace;
+    let attractionCount = 0;
+    let lunchAttempted = false;
 
-    while (activities.length < maxPerDay) {
+    while (attractionCount < maxPerDay) {
+      // Meal slot: once the morning reaches lunch time, eat before the next
+      // stop. Meals do not count toward the pace cap.
+      if (!lunchAttempted && clock >= LUNCH_START_MINUTES) {
+        lunchAttempted = true;
+        const lunch = await scheduleMeal(
+          dayOfWeek,
+          clock,
+          previous,
+          LUNCH_START_MINUTES,
+        );
+        if (lunch !== null) {
+          activities.push(lunch.activity);
+          previous = lunch.place;
+          clock = lunch.end;
+        }
+        continue;
+      }
       let scheduled = false;
       // Cluster days geographically: once a day has a place, prefer
       // candidates in the same area before falling back to the rest, so a
@@ -201,6 +296,7 @@ export async function planTrip(
         queue.splice(i, 1);
         previous = candidate;
         clock = end;
+        attractionCount += 1;
         scheduled = true;
         break;
       }
@@ -208,6 +304,33 @@ export async function planTrip(
         break;
       }
     }
+
+    // Short morning (queue exhausted before noon) still deserves lunch.
+    if (!lunchAttempted) {
+      const lunch = await scheduleMeal(
+        dayOfWeek,
+        clock,
+        previous,
+        LUNCH_START_MINUTES,
+      );
+      if (lunch !== null) {
+        activities.push(lunch.activity);
+        previous = lunch.place;
+        clock = lunch.end;
+      }
+    }
+    const dinner = await scheduleMeal(
+      dayOfWeek,
+      clock,
+      previous,
+      DINNER_START_MINUTES,
+    );
+    if (dinner !== null) {
+      activities.push(dinner.activity);
+      previous = dinner.place;
+      clock = dinner.end;
+    }
+
     days.push({ date, activities });
   }
 

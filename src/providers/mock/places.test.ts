@@ -5,8 +5,9 @@ import placesFixture from "../../../fixtures/places.json";
 
 describe("fixtures/places.json", () => {
   it("has between 16 and 20 entries", () => {
-    expect(placesFixture.length).toBeGreaterThanOrEqual(16);
-    expect(placesFixture.length).toBeLessThanOrEqual(20);
+    // 18 attractions + restaurants (meal slots) + lodging options.
+    expect(placesFixture.length).toBeGreaterThanOrEqual(25);
+    expect(placesFixture.length).toBeLessThanOrEqual(40);
   });
 
   it("has every entry satisfy PlaceSchema", () => {

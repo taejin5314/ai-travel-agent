@@ -27,14 +27,21 @@ function buildItineraryView(
   itinerary: Itinerary,
   places: Place[],
 ): ItineraryViewDay[] {
-  const nameById = new Map(places.map((p) => [p.id, p.name]));
+  const placeById = new Map(places.map((p) => [p.id, p]));
   return itinerary.days.map((day) => ({
     date: day.date,
-    items: day.activities.map((activity) => ({
-      placeName: nameById.get(activity.placeId) ?? activity.placeId,
-      start: activity.start,
-      end: activity.end,
-    })),
+    items: day.activities.map((activity) => {
+      const place = placeById.get(activity.placeId);
+      return {
+        placeName: place?.name ?? activity.placeId,
+        start: activity.start,
+        end: activity.end,
+        kind: (place?.category === "restaurant" ? "meal" : "visit") as
+          | "meal"
+          | "visit",
+        rating: place?.rating,
+      };
+    }),
   }));
 }
 
