@@ -1,0 +1,289 @@
+import { PlaceSchema, type Place } from "@/domain/schema/place";
+import type { PlaceArea, PlacesPort } from "@/providers/ports";
+import {
+  GooglePlaceSchema,
+  SearchTextResponseSchema,
+  type GooglePlace,
+} from "@/providers/google/schema";
+
+const PLACES_ENDPOINT = "https://places.googleapis.com/v1";
+
+const FIELD_MASK = [
+  "id",
+  "displayName",
+  "location",
+  "formattedAddress",
+  "rating",
+  "userRatingCount",
+  "types",
+  "regularOpeningHours",
+];
+
+/** Kansai bounding boxes; results outside both areas are dropped. */
+const AREA_BOUNDS: Record<PlaceArea, { lat: [number, number]; lng: [number, number] }> = {
+  osaka: { lat: [34.3, 34.85], lng: [135.25, 135.75] },
+  kyoto: { lat: [34.85, 35.2], lng: [135.55, 135.95] },
+};
+
+/** Location bias covering both Osaka and Kyoto for text searches. */
+const KANSAI_BIAS = {
+  rectangle: {
+    low: { latitude: 34.3, longitude: 135.25 },
+    high: { latitude: 35.2, longitude: 135.95 },
+  },
+};
+
+const CATALOG_QUERIES: Record<PlaceArea, string[]> = {
+  osaka: [
+    "top tourist attractions in Osaka Japan",
+    "best restaurants in Osaka Japan",
+    "hotels in Osaka Japan",
+  ],
+  kyoto: [
+    "top tourist attractions in Kyoto Japan",
+    "best restaurants in Kyoto Japan",
+    "hotels in Kyoto Japan",
+  ],
+};
+
+const VISIT_MINUTES_BY_CATEGORY: Record<Place["category"], number> = {
+  sight: 90,
+  culture: 75,
+  nature: 90,
+  shopping: 60,
+  food: 60,
+  entertainment: 180,
+  restaurant: 60,
+  lodging: 1,
+};
+
+const CATEGORY_BY_TYPE: readonly [string, Place["category"]][] = [
+  ["lodging", "lodging"],
+  ["hotel", "lodging"],
+  ["restaurant", "restaurant"],
+  ["cafe", "restaurant"],
+  ["bakery", "restaurant"],
+  ["amusement_park", "entertainment"],
+  ["aquarium", "entertainment"],
+  ["zoo", "entertainment"],
+  ["movie_theater", "entertainment"],
+  ["museum", "culture"],
+  ["place_of_worship", "culture"],
+  ["buddhist_temple", "culture"],
+  ["shinto_shrine", "culture"],
+  ["historical_landmark", "culture"],
+  ["market", "food"],
+  ["food_market", "food"],
+  ["park", "nature"],
+  ["garden", "nature"],
+  ["national_park", "nature"],
+  ["shopping_mall", "shopping"],
+  ["department_store", "shopping"],
+  ["tourist_attraction", "sight"],
+];
+
+type FetchLike = (
+  url: string,
+  init?: RequestInit,
+) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+
+export interface GooglePlacesProviderOptions {
+  apiKey: string;
+  fetchFn?: FetchLike;
+  /** Result language; Korean by default so the UI shows Korean names. */
+  languageCode?: string;
+}
+
+function areaOf(lat: number, lng: number): PlaceArea | null {
+  for (const [area, bounds] of Object.entries(AREA_BOUNDS) as [
+    PlaceArea,
+    (typeof AREA_BOUNDS)[PlaceArea],
+  ][]) {
+    if (
+      lat >= bounds.lat[0] &&
+      lat <= bounds.lat[1] &&
+      lng >= bounds.lng[0] &&
+      lng <= bounds.lng[1]
+    ) {
+      return area;
+    }
+  }
+  return null;
+}
+
+function categoryOf(types: readonly string[]): Place["category"] {
+  for (const [googleType, category] of CATEGORY_BY_TYPE) {
+    if (types.includes(googleType)) {
+      return category;
+    }
+  }
+  return "sight";
+}
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/**
+ * Google periods (day 0 = Sunday) → our Mon..Sun tuple. One window per day;
+ * overnight closes clamp to 23:59; no data at all = assume always open so
+ * the validator does not reject places Google simply has no hours for.
+ */
+function toOpeningHours(place: GooglePlace): Place["openingHours"] {
+  const periods = place.regularOpeningHours?.periods;
+  if (periods === undefined || periods.length === 0) {
+    const allDay = { open: "00:00", close: "23:59" };
+    return [allDay, allDay, allDay, allDay, allDay, allDay, allDay];
+  }
+  const week: (null | { open: string; close: string })[] = [
+    null, null, null, null, null, null, null,
+  ];
+  for (const period of periods) {
+    const ourIndex = (period.open.day + 6) % 7;
+    if (week[ourIndex] !== null) {
+      continue; // keep the first window of the day
+    }
+    const open = `${pad(period.open.hour)}:${pad(period.open.minute)}`;
+    const close =
+      period.close === undefined || period.close.day !== period.open.day
+        ? "23:59"
+        : `${pad(period.close.hour)}:${pad(period.close.minute)}`;
+    week[ourIndex] = { open, close };
+  }
+  return week as Place["openingHours"];
+}
+
+export class GooglePlacesProvider implements PlacesPort {
+  private readonly apiKey: string;
+  private readonly fetchFn: FetchLike;
+  private readonly languageCode: string;
+  private readonly catalogCache = new Map<PlaceArea, Place[]>();
+  private readonly placeCache = new Map<string, Place>();
+
+  constructor(options: GooglePlacesProviderOptions) {
+    this.apiKey = options.apiKey;
+    this.fetchFn = options.fetchFn ?? (fetch as unknown as FetchLike);
+    this.languageCode = options.languageCode ?? "ko";
+  }
+
+  private toDomainPlace(googlePlace: GooglePlace): Place | null {
+    const area = areaOf(
+      googlePlace.location.latitude,
+      googlePlace.location.longitude,
+    );
+    if (area === null) {
+      return null; // outside Osaka/Kyoto — not supported yet
+    }
+    const category = categoryOf(googlePlace.types ?? []);
+    const candidate = {
+      id: googlePlace.id,
+      name: googlePlace.displayName.text,
+      area,
+      category,
+      location: {
+        lat: googlePlace.location.latitude,
+        lng: googlePlace.location.longitude,
+      },
+      openingHours: toOpeningHours(googlePlace),
+      typicalVisitMinutes: VISIT_MINUTES_BY_CATEGORY[category],
+      rating: googlePlace.rating,
+      reviewCount: googlePlace.userRatingCount,
+    };
+    const parsed = PlaceSchema.safeParse(candidate);
+    if (!parsed.success) {
+      return null; // drop entries that cannot become a valid domain Place
+    }
+    this.placeCache.set(parsed.data.id, parsed.data);
+    return parsed.data;
+  }
+
+  private async searchText(textQuery: string): Promise<Place[]> {
+    const response = await this.fetchFn(`${PLACES_ENDPOINT}/places:searchText`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": this.apiKey,
+        "X-Goog-FieldMask": FIELD_MASK.map((f) => `places.${f}`).join(","),
+      },
+      body: JSON.stringify({
+        textQuery,
+        languageCode: this.languageCode,
+        locationBias: KANSAI_BIAS,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Google Places searchText failed (HTTP ${response.status})`);
+    }
+    const parsed = SearchTextResponseSchema.parse(await response.json());
+    const places: Place[] = [];
+    for (const googlePlace of parsed.places ?? []) {
+      const place = this.toDomainPlace(googlePlace);
+      if (place !== null) {
+        places.push(place);
+      }
+    }
+    return places;
+  }
+
+  private async catalogFor(area: PlaceArea): Promise<Place[]> {
+    const cached = this.catalogCache.get(area);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const results = await Promise.all(
+      CATALOG_QUERIES[area].map((query) => this.searchText(query)),
+    );
+    const byId = new Map<string, Place>();
+    for (const place of results.flat()) {
+      if (place.area === area) {
+        byId.set(place.id, place);
+      }
+    }
+    const catalog = [...byId.values()];
+    this.catalogCache.set(area, catalog);
+    return catalog;
+  }
+
+  async listPlaces(area?: PlaceArea): Promise<Place[]> {
+    if (area !== undefined) {
+      return [...(await this.catalogFor(area))];
+    }
+    const [osaka, kyoto] = await Promise.all([
+      this.catalogFor("osaka"),
+      this.catalogFor("kyoto"),
+    ]);
+    return [...osaka, ...kyoto];
+  }
+
+  async getPlaceById(id: string): Promise<Place | null> {
+    const cached = this.placeCache.get(id);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const response = await this.fetchFn(
+      `${PLACES_ENDPOINT}/places/${encodeURIComponent(id)}?languageCode=${this.languageCode}`,
+      {
+        headers: {
+          "X-Goog-Api-Key": this.apiKey,
+          "X-Goog-FieldMask": FIELD_MASK.join(","),
+        },
+      },
+    );
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Google Places details failed (HTTP ${response.status})`);
+    }
+    const parsed = GooglePlaceSchema.parse(await response.json());
+    return this.toDomainPlace(parsed);
+  }
+
+  async findPlacesByName(query: string): Promise<Place[]> {
+    const needle = query.trim();
+    if (needle.length === 0) {
+      return [];
+    }
+    return this.searchText(needle);
+  }
+}

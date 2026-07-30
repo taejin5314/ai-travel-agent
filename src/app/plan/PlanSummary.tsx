@@ -64,10 +64,12 @@ export function PlanSummary({
   data,
   itinerary,
   planningNotice,
+  dataSource,
 }: {
   data: TripPreferences;
   itinerary?: ItineraryViewDay[];
   planningNotice?: string;
+  dataSource?: "google" | "mock";
 }) {
   return (
     <div className="flex w-full flex-col gap-4 rounded-2xl border border-black/10 p-5 text-left dark:border-white/15">
@@ -121,8 +123,9 @@ export function PlanSummary({
       )}
 
       <p className="text-xs text-zinc-500 dark:text-zinc-500">
-        일정은 장소 데이터(현재는 목 데이터)의 운영시간과 이동시간을 검증해
-        생성됩니다.
+        {dataSource === "google"
+          ? "일정은 Google 실시간 장소 데이터(평점·운영시간·이동시간)를 검증해 생성됩니다."
+          : "일정은 장소 데이터(현재는 목 데이터)의 운영시간과 이동시간을 검증해 생성됩니다."}
       </p>
     </div>
   );

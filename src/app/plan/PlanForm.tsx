@@ -28,6 +28,7 @@ export function PlanForm() {
         data={state.data}
         itinerary={state.itinerary}
         planningNotice={state.planningNotice}
+        dataSource={state.dataSource}
       />
     );
   }
