@@ -20,9 +20,20 @@ export type PlanFormValues = {
   constraints: string;
 };
 
+/** Presentation-only view of a generated itinerary (place ids resolved to names). */
+export type ItineraryViewDay = {
+  date: string;
+  items: { placeName: string; start: string; end: string }[];
+};
+
 export type PlanFormState =
   | { status: "idle" }
-  | { status: "success"; data: TripPreferences }
+  | {
+      status: "success";
+      data: TripPreferences;
+      itinerary?: ItineraryViewDay[];
+      planningNotice?: string;
+    }
   | { status: "error"; errors: string[]; values: PlanFormValues };
 
 export const initialPlanFormState: PlanFormState = { status: "idle" };

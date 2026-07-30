@@ -23,7 +23,13 @@ export function PlanForm() {
   );
 
   if (state.status === "success") {
-    return <PlanSummary data={state.data} />;
+    return (
+      <PlanSummary
+        data={state.data}
+        itinerary={state.itinerary}
+        planningNotice={state.planningNotice}
+      />
+    );
   }
 
   const values = state.status === "error" ? state.values : undefined;
