@@ -108,6 +108,13 @@ describe("translateValidationErrors", () => {
     expect(messages[0]).toContain("중복");
   });
 
+  it("translates the trip-length-exceeded business error", () => {
+    const messages = translateValidationErrors([
+      "Trip length (35 days) exceeds the maximum of 30 days.",
+    ]);
+    expect(messages).toEqual(["여행 기간이 최대 허용 일수(30일)를 초과했습니다."]);
+  });
+
   it("translates the partySize-out-of-range business error", () => {
     const messages = translateValidationErrors([
       "partySize must be between 1 and 20.",

@@ -11,8 +11,8 @@ export const TripPreferencesSchema = z.object({
   startDate: isoDateSchema,
   endDate: isoDateSchema,
   lodging: z.object({
-    name: z.string(),
-    area: z.string(),
+    name: z.string().trim().min(1, "lodging.name must not be blank"),
+    area: z.string().trim().min(1, "lodging.area must not be blank"),
   }),
   partySize: z.number().int().min(1),
   mustVisit: z.array(z.string().min(1)),
