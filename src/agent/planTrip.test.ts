@@ -230,6 +230,151 @@ describe("planTrip area clustering", () => {
   });
 });
 
+describe("planTrip meals, ratings, and lodging anchor", () => {
+  // Restaurants keep realistic evening hours so dinner slots fit.
+  const eats = { open: "11:00", close: "22:00" };
+  const osakaRamen: Place = {
+    id: "osaka-ramen",
+    name: "Osaka Ramen",
+    area: "osaka",
+    category: "restaurant",
+    location: { lat: 34.6688, lng: 135.5014 },
+    openingHours: [eats, eats, eats, eats, eats, eats, eats],
+    typicalVisitMinutes: 45,
+    rating: 4.5,
+    reviewCount: 1000,
+  };
+  const osakaSushi: Place = {
+    id: "osaka-sushi",
+    name: "Osaka Sushi",
+    area: "osaka",
+    category: "restaurant",
+    location: { lat: 34.67, lng: 135.502 },
+    openingHours: [eats, eats, eats, eats, eats, eats, eats],
+    typicalVisitMinutes: 45,
+    rating: 4.0,
+    reviewCount: 800,
+  };
+  const hotelNamba: Place = {
+    id: "hotel-namba",
+    name: "Hotel Namba",
+    area: "osaka",
+    category: "lodging",
+    location: { lat: 34.6664, lng: 135.5013 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 1,
+    rating: 4.2,
+    reviewCount: 500,
+  };
+  const mealFixture: Place[] = [...fixture, osakaRamen, osakaSushi, hotelNamba];
+
+  function makeMealPorts(catalog: Place[] = mealFixture) {
+    return {
+      places: new MockPlacesProvider(catalog),
+      routes: new MockRoutesProvider(),
+    };
+  }
+
+  it("inserts lunch and dinner slots that pass validation", async () => {
+    // relaxed keeps day 1 in Osaka, so both meal slots are reachable.
+    const relaxed: TripPreferences = { ...preferences, pace: "relaxed" };
+    const result = await planTrip(relaxed, makeMealPorts());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        validateItinerary(result.itinerary, mealFixture, relaxed),
+      ).toEqual({ ok: true });
+      const day = result.itinerary.days[0];
+      const meals = day.activities.filter((a) =>
+        ["osaka-ramen", "osaka-sushi"].includes(a.placeId),
+      );
+      expect(meals).toHaveLength(2);
+      const [lunch, dinner] = meals;
+      expect(lunch.start >= "12:00").toBe(true);
+      expect(dinner.start >= "17:30").toBe(true);
+    }
+  });
+
+  it("does not count meals toward the pace cap", async () => {
+    const result = await planTrip(
+      { ...preferences, pace: "relaxed" },
+      makeMealPorts(),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      for (const day of result.itinerary.days) {
+        const attractions = day.activities.filter(
+          (a) => !["osaka-ramen", "osaka-sushi"].includes(a.placeId),
+        );
+        expect(attractions.length).toBeLessThanOrEqual(
+          PACE_MAX_ACTIVITIES_PER_DAY.relaxed,
+        );
+      }
+      const dayOneTotal = result.itinerary.days[0].activities.length;
+      expect(dayOneTotal).toBeGreaterThan(PACE_MAX_ACTIVITIES_PER_DAY.relaxed);
+    }
+  });
+
+  it("picks the higher-rated restaurant for the first meal", async () => {
+    const result = await planTrip(preferences, makeMealPorts());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const mealIds = result.itinerary.days[0].activities
+        .filter((a) => ["osaka-ramen", "osaka-sushi"].includes(a.placeId))
+        .map((a) => a.placeId);
+      expect(mealIds[0]).toBe("osaka-ramen"); // 4.5 > 4.0
+    }
+  });
+
+  it("prefers higher-rated attractions when no interests are set", async () => {
+    const lowSight: Place = {
+      ...fixture[0],
+      id: "low-sight",
+      name: "Low Sight",
+      aliases: [],
+      rating: 3.0,
+    };
+    const highSight: Place = {
+      ...fixture[0],
+      id: "high-sight",
+      name: "High Sight",
+      aliases: [],
+      rating: 4.9,
+    };
+    const result = await planTrip(
+      { ...preferences, mustVisit: [], interests: [] },
+      makeMealPorts([lowSight, highSight]),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.itinerary.days[0].activities[0].placeId).toBe("high-sight");
+    }
+  });
+
+  it("anchors the first stop to the lodging's area when the lodging is known", async () => {
+    // Kyoto place listed first: without the anchor it would start the day.
+    const kyotoFirst: Place[] = [fixture[2], fixture[0], hotelNamba];
+    const result = await planTrip(
+      { ...preferences, mustVisit: [], interests: [] },
+      makeMealPorts(kyotoFirst),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.itinerary.days[0].activities[0].placeId).toBe(
+        "osaka-castle",
+      );
+    }
+  });
+
+  it("plans without an anchor when the lodging is not in the catalog", async () => {
+    const result = await planTrip(
+      { ...preferences, lodging: { name: "Unknown Inn", area: "?" } },
+      makeMealPorts(),
+    );
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe("mapInterestsToCategories", () => {
   it("maps Korean keywords and English category names, ignoring unknowns", () => {
     const categories = mapInterestsToCategories(["음식", " Shopping ", "우주"]);

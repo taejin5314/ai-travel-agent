@@ -38,7 +38,9 @@
     "typicalVisitMinutes": 90,
     "aliases": [
       "오사카성"
-    ]
+    ],
+    "rating": 4.5,
+    "reviewCount": 68000
   },
   {
     "id": "dotonbori",
@@ -82,7 +84,9 @@
     "typicalVisitMinutes": 120,
     "aliases": [
       "도톤보리"
-    ]
+    ],
+    "rating": 4.4,
+    "reviewCount": 92000
   },
   {
     "id": "usj",
@@ -127,7 +131,9 @@
     "aliases": [
       "유니버설 스튜디오 재팬",
       "유니버설 스튜디오"
-    ]
+    ],
+    "rating": 4.5,
+    "reviewCount": 155000
   },
   {
     "id": "kuromon-ichiba-market",
@@ -169,7 +175,9 @@
     "aliases": [
       "구로몬 시장",
       "구로몬 이치바 시장"
-    ]
+    ],
+    "rating": 4.2,
+    "reviewCount": 31000
   },
   {
     "id": "umeda-sky-building",
@@ -213,7 +221,9 @@
     "typicalVisitMinutes": 60,
     "aliases": [
       "우메다 스카이빌딩"
-    ]
+    ],
+    "rating": 4.3,
+    "reviewCount": 24000
   },
   {
     "id": "shitennoji-temple",
@@ -257,7 +267,9 @@
     "typicalVisitMinutes": 45,
     "aliases": [
       "시텐노지"
-    ]
+    ],
+    "rating": 4.3,
+    "reviewCount": 12000
   },
   {
     "id": "osaka-aquarium-kaiyukan",
@@ -299,7 +311,9 @@
     "aliases": [
       "가이유칸",
       "오사카 아쿠아리움"
-    ]
+    ],
+    "rating": 4.5,
+    "reviewCount": 51000
   },
   {
     "id": "namba-yasaka-shrine",
@@ -343,7 +357,9 @@
     "typicalVisitMinutes": 20,
     "aliases": [
       "난바 야사카 신사"
-    ]
+    ],
+    "rating": 4.4,
+    "reviewCount": 8000
   },
   {
     "id": "tsutenkaku-tower",
@@ -387,7 +403,9 @@
     "typicalVisitMinutes": 45,
     "aliases": [
       "츠텐카쿠"
-    ]
+    ],
+    "rating": 4.1,
+    "reviewCount": 19000
   },
   {
     "id": "sumiyoshi-taisha",
@@ -432,7 +450,9 @@
     "aliases": [
       "스미요시타이샤",
       "스미요시 대사"
-    ]
+    ],
+    "rating": 4.4,
+    "reviewCount": 11000
   },
   {
     "id": "fushimi-inari-taisha",
@@ -477,7 +497,9 @@
     "aliases": [
       "후시미 이나리",
       "후시미이나리타이샤"
-    ]
+    ],
+    "rating": 4.6,
+    "reviewCount": 110000
   },
   {
     "id": "kinkaku-ji",
@@ -522,7 +544,9 @@
     "aliases": [
       "킨카쿠지",
       "금각사"
-    ]
+    ],
+    "rating": 4.5,
+    "reviewCount": 74000
   },
   {
     "id": "arashiyama-bamboo-grove",
@@ -567,7 +591,9 @@
     "aliases": [
       "아라시야마 대나무숲",
       "아라시야마"
-    ]
+    ],
+    "rating": 4.4,
+    "reviewCount": 47000
   },
   {
     "id": "kiyomizu-dera",
@@ -612,7 +638,9 @@
     "aliases": [
       "기요미즈데라",
       "청수사"
-    ]
+    ],
+    "rating": 4.5,
+    "reviewCount": 63000
   },
   {
     "id": "nishiki-market",
@@ -653,7 +681,9 @@
     "typicalVisitMinutes": 60,
     "aliases": [
       "니시키 시장"
-    ]
+    ],
+    "rating": 4.2,
+    "reviewCount": 35000
   },
   {
     "id": "gion-district",
@@ -697,7 +727,9 @@
     "typicalVisitMinutes": 60,
     "aliases": [
       "기온"
-    ]
+    ],
+    "rating": 4.4,
+    "reviewCount": 28000
   },
   {
     "id": "nijo-castle",
@@ -738,7 +770,9 @@
     "typicalVisitMinutes": 75,
     "aliases": [
       "니조성"
-    ]
+    ],
+    "rating": 4.4,
+    "reviewCount": 33000
   },
   {
     "id": "kamo-river",
@@ -783,6 +817,518 @@
     "aliases": [
       "가모가와",
       "가모 강"
-    ]
+    ],
+    "rating": 4.5,
+    "reviewCount": 9000
+  },
+  {
+    "id": "ichiran-dotonbori",
+    "name": "Ichiran Dotonbori",
+    "aliases": [
+      "이치란 도톤보리",
+      "이치란"
+    ],
+    "area": "osaka",
+    "category": "restaurant",
+    "location": {
+      "lat": 34.6687,
+      "lng": 135.5013
+    },
+    "openingHours": [
+      {
+        "open": "10:00",
+        "close": "22:00"
+      },
+      {
+        "open": "10:00",
+        "close": "22:00"
+      },
+      {
+        "open": "10:00",
+        "close": "22:00"
+      },
+      {
+        "open": "10:00",
+        "close": "22:00"
+      },
+      {
+        "open": "10:00",
+        "close": "22:00"
+      },
+      {
+        "open": "10:00",
+        "close": "22:00"
+      },
+      {
+        "open": "10:00",
+        "close": "22:00"
+      }
+    ],
+    "typicalVisitMinutes": 45,
+    "rating": 4.3,
+    "reviewCount": 42000
+  },
+  {
+    "id": "mizuno-okonomiyaki",
+    "name": "Mizuno",
+    "aliases": [
+      "미즈노",
+      "미즈노 오코노미야키"
+    ],
+    "area": "osaka",
+    "category": "restaurant",
+    "location": {
+      "lat": 34.6685,
+      "lng": 135.5027
+    },
+    "openingHours": [
+      {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      {
+        "open": "11:00",
+        "close": "21:00"
+      }
+    ],
+    "typicalVisitMinutes": 60,
+    "rating": 4.4,
+    "reviewCount": 9800
+  },
+  {
+    "id": "daruma-shinsekai",
+    "name": "Kushikatsu Daruma Shinsekai",
+    "aliases": [
+      "다루마 신세카이",
+      "쿠시카츠 다루마"
+    ],
+    "area": "osaka",
+    "category": "restaurant",
+    "location": {
+      "lat": 34.6524,
+      "lng": 135.5063
+    },
+    "openingHours": [
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      }
+    ],
+    "typicalVisitMinutes": 60,
+    "rating": 4.2,
+    "reviewCount": 15000
+  },
+  {
+    "id": "harukoma-sushi",
+    "name": "Harukoma Sushi",
+    "aliases": [
+      "하루코마 스시",
+      "하루코마"
+    ],
+    "area": "osaka",
+    "category": "restaurant",
+    "location": {
+      "lat": 34.7052,
+      "lng": 135.5063
+    },
+    "openingHours": [
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      null,
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      }
+    ],
+    "typicalVisitMinutes": 50,
+    "rating": 4.4,
+    "reviewCount": 6200
+  },
+  {
+    "id": "ippudo-nishiki",
+    "name": "Ippudo Nishikikoji",
+    "aliases": [
+      "잇푸도 니시키",
+      "잇푸도"
+    ],
+    "area": "kyoto",
+    "category": "restaurant",
+    "location": {
+      "lat": 35.0049,
+      "lng": 135.7649
+    },
+    "openingHours": [
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      {
+        "open": "11:00",
+        "close": "22:00"
+      }
+    ],
+    "typicalVisitMinutes": 45,
+    "rating": 4.2,
+    "reviewCount": 7400
+  },
+  {
+    "id": "katsukura-sanjo",
+    "name": "Katsukura Sanjo",
+    "aliases": [
+      "카츠쿠라 산조",
+      "카츠쿠라"
+    ],
+    "area": "kyoto",
+    "category": "restaurant",
+    "location": {
+      "lat": 35.0089,
+      "lng": 135.7667
+    },
+    "openingHours": [
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      },
+      {
+        "open": "11:00",
+        "close": "21:30"
+      }
+    ],
+    "typicalVisitMinutes": 55,
+    "rating": 4.4,
+    "reviewCount": 8900
+  },
+  {
+    "id": "honke-owariya",
+    "name": "Honke Owariya",
+    "aliases": [
+      "혼케 오와리야",
+      "오와리야"
+    ],
+    "area": "kyoto",
+    "category": "restaurant",
+    "location": {
+      "lat": 35.0125,
+      "lng": 135.7593
+    },
+    "openingHours": [
+      {
+        "open": "11:00",
+        "close": "19:00"
+      },
+      {
+        "open": "11:00",
+        "close": "19:00"
+      },
+      {
+        "open": "11:00",
+        "close": "19:00"
+      },
+      null,
+      {
+        "open": "11:00",
+        "close": "19:00"
+      },
+      {
+        "open": "11:00",
+        "close": "19:00"
+      },
+      {
+        "open": "11:00",
+        "close": "19:00"
+      }
+    ],
+    "typicalVisitMinutes": 50,
+    "rating": 4.3,
+    "reviewCount": 5600
+  },
+  {
+    "id": "menbaka-fire-ramen",
+    "name": "Menbaka Fire Ramen",
+    "aliases": [
+      "멘바카 파이어 라멘",
+      "파이어 라멘"
+    ],
+    "area": "kyoto",
+    "category": "restaurant",
+    "location": {
+      "lat": 35.0172,
+      "lng": 135.7414
+    },
+    "openingHours": [
+      {
+        "open": "11:30",
+        "close": "21:00"
+      },
+      {
+        "open": "11:30",
+        "close": "21:00"
+      },
+      {
+        "open": "11:30",
+        "close": "21:00"
+      },
+      {
+        "open": "11:30",
+        "close": "21:00"
+      },
+      {
+        "open": "11:30",
+        "close": "21:00"
+      },
+      {
+        "open": "11:30",
+        "close": "21:00"
+      },
+      {
+        "open": "11:30",
+        "close": "21:00"
+      }
+    ],
+    "typicalVisitMinutes": 45,
+    "rating": 4.5,
+    "reviewCount": 4800
+  },
+  {
+    "id": "cross-hotel-osaka",
+    "name": "Cross Hotel Osaka",
+    "aliases": [
+      "크로스 호텔 오사카"
+    ],
+    "area": "osaka",
+    "category": "lodging",
+    "location": {
+      "lat": 34.6699,
+      "lng": 135.5018
+    },
+    "openingHours": [
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      }
+    ],
+    "typicalVisitMinutes": 1,
+    "rating": 4.4,
+    "reviewCount": 5200
+  },
+  {
+    "id": "hotel-granvia-osaka",
+    "name": "Hotel Granvia Osaka",
+    "aliases": [
+      "호텔 그란비아 오사카",
+      "그란비아 오사카"
+    ],
+    "area": "osaka",
+    "category": "lodging",
+    "location": {
+      "lat": 34.7024,
+      "lng": 135.4959
+    },
+    "openingHours": [
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      }
+    ],
+    "typicalVisitMinutes": 1,
+    "rating": 4.3,
+    "reviewCount": 8100
+  },
+  {
+    "id": "hotel-granvia-kyoto",
+    "name": "Hotel Granvia Kyoto",
+    "aliases": [
+      "호텔 그란비아 교토",
+      "그란비아 교토"
+    ],
+    "area": "kyoto",
+    "category": "lodging",
+    "location": {
+      "lat": 34.9858,
+      "lng": 135.7588
+    },
+    "openingHours": [
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      }
+    ],
+    "typicalVisitMinutes": 1,
+    "rating": 4.4,
+    "reviewCount": 6900
   }
 ]

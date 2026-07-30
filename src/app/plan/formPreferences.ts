@@ -23,7 +23,13 @@ export type PlanFormValues = {
 /** Presentation-only view of a generated itinerary (place ids resolved to names). */
 export type ItineraryViewDay = {
   date: string;
-  items: { placeName: string; start: string; end: string }[];
+  items: {
+    placeName: string;
+    start: string;
+    end: string;
+    kind: "visit" | "meal";
+    rating?: number;
+  }[];
 };
 
 export type PlanFormState =
