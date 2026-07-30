@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
@@ -15,18 +17,12 @@ export default function Home() {
           운영시간을 검증한 날짜별 일정을 만들어 드립니다.
         </p>
 
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className="mt-2 h-12 w-full max-w-xs cursor-not-allowed rounded-full bg-foreground px-6 text-sm font-medium text-background opacity-50"
+        <Link
+          href="/plan"
+          className="mt-2 flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-foreground px-6 text-sm font-medium text-background"
         >
           여행 계획 시작
-        </button>
-
-        <p className="text-xs text-zinc-500 dark:text-zinc-500">
-          곧 만나요 · 현재 준비 중입니다
-        </p>
+        </Link>
       </div>
     </main>
   );
