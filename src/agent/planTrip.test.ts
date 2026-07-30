@@ -189,6 +189,47 @@ describe("planTrip", () => {
   });
 });
 
+describe("planTrip area clustering", () => {
+  it("keeps each day within a single area when capacity allows", async () => {
+    const twoAreas: Place[] = [
+      fixture[0], // osaka-castle (osaka)
+      fixture[1], // kuromon-market (osaka)
+      fixture[2], // fushimi-inari (kyoto)
+      {
+        id: "kinkaku-ji",
+        name: "Kinkaku-ji",
+        area: "kyoto",
+        category: "culture",
+        location: { lat: 35.0394, lng: 135.7292 },
+        openingHours: [daily, daily, daily, daily, daily, daily, daily],
+        typicalVisitMinutes: 90,
+      },
+    ];
+    const result = await planTrip(
+      {
+        ...preferences,
+        mustVisit: [],
+        interests: [],
+        pace: "relaxed", // 2 activities/day → 2 osaka places day 1, 2 kyoto day 2
+      },
+      {
+        places: new MockPlacesProvider(twoAreas),
+        routes: new MockRoutesProvider(),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const areaById = new Map(twoAreas.map((p) => [p.id, p.area]));
+      for (const day of result.itinerary.days) {
+        const areas = new Set(
+          day.activities.map((a) => areaById.get(a.placeId)),
+        );
+        expect(areas.size).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});
+
 describe("mapInterestsToCategories", () => {
   it("maps Korean keywords and English category names, ignoring unknowns", () => {
     const categories = mapInterestsToCategories(["음식", " Shopping ", "우주"]);
