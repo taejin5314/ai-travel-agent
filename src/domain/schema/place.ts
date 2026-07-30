@@ -33,6 +33,8 @@ const OpeningHoursSchema = z.tuple([
 export const PlaceSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  /** Alternative names (e.g. Korean) accepted when matching user input. */
+  aliases: z.array(z.string().min(1)).optional(),
   area: PlaceAreaSchema,
   category: PlaceCategorySchema,
   location: z.object({

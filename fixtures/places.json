@@ -4,305 +4,785 @@
     "name": "Osaka Castle",
     "area": "osaka",
     "category": "sight",
-    "location": { "lat": 34.6873, "lng": 135.5262 },
+    "location": {
+      "lat": 34.6873,
+      "lng": 135.5262
+    },
     "openingHours": [
       null,
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" }
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      }
     ],
-    "typicalVisitMinutes": 90
+    "typicalVisitMinutes": 90,
+    "aliases": [
+      "오사카성"
+    ]
   },
   {
     "id": "dotonbori",
     "name": "Dotonbori",
     "area": "osaka",
     "category": "entertainment",
-    "location": { "lat": 34.6687, "lng": 135.5030 },
+    "location": {
+      "lat": 34.6687,
+      "lng": 135.503
+    },
     "openingHours": [
-      { "open": "10:00", "close": "23:59" },
-      { "open": "10:00", "close": "23:59" },
-      { "open": "10:00", "close": "23:59" },
-      { "open": "10:00", "close": "23:59" },
-      { "open": "10:00", "close": "23:59" },
-      { "open": "10:00", "close": "23:59" },
-      { "open": "10:00", "close": "23:59" }
+      {
+        "open": "10:00",
+        "close": "23:59"
+      },
+      {
+        "open": "10:00",
+        "close": "23:59"
+      },
+      {
+        "open": "10:00",
+        "close": "23:59"
+      },
+      {
+        "open": "10:00",
+        "close": "23:59"
+      },
+      {
+        "open": "10:00",
+        "close": "23:59"
+      },
+      {
+        "open": "10:00",
+        "close": "23:59"
+      },
+      {
+        "open": "10:00",
+        "close": "23:59"
+      }
     ],
-    "typicalVisitMinutes": 120
+    "typicalVisitMinutes": 120,
+    "aliases": [
+      "도톤보리"
+    ]
   },
   {
     "id": "usj",
     "name": "Universal Studios Japan",
     "area": "osaka",
     "category": "entertainment",
-    "location": { "lat": 34.6654, "lng": 135.4323 },
+    "location": {
+      "lat": 34.6654,
+      "lng": 135.4323
+    },
     "openingHours": [
-      { "open": "09:00", "close": "20:00" },
-      { "open": "09:00", "close": "20:00" },
-      { "open": "09:00", "close": "20:00" },
-      { "open": "09:00", "close": "20:00" },
-      { "open": "09:00", "close": "20:00" },
-      { "open": "09:00", "close": "20:00" },
-      { "open": "09:00", "close": "20:00" }
+      {
+        "open": "09:00",
+        "close": "20:00"
+      },
+      {
+        "open": "09:00",
+        "close": "20:00"
+      },
+      {
+        "open": "09:00",
+        "close": "20:00"
+      },
+      {
+        "open": "09:00",
+        "close": "20:00"
+      },
+      {
+        "open": "09:00",
+        "close": "20:00"
+      },
+      {
+        "open": "09:00",
+        "close": "20:00"
+      },
+      {
+        "open": "09:00",
+        "close": "20:00"
+      }
     ],
-    "typicalVisitMinutes": 480
+    "typicalVisitMinutes": 480,
+    "aliases": [
+      "유니버설 스튜디오 재팬",
+      "유니버설 스튜디오"
+    ]
   },
   {
     "id": "kuromon-ichiba-market",
     "name": "Kuromon Ichiba Market",
     "area": "osaka",
     "category": "food",
-    "location": { "lat": 34.6656, "lng": 135.5065 },
+    "location": {
+      "lat": 34.6656,
+      "lng": 135.5065
+    },
     "openingHours": [
-      { "open": "08:00", "close": "18:00" },
-      { "open": "08:00", "close": "18:00" },
-      { "open": "08:00", "close": "18:00" },
-      { "open": "08:00", "close": "18:00" },
-      { "open": "08:00", "close": "18:00" },
-      { "open": "08:00", "close": "18:00" },
+      {
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "open": "08:00",
+        "close": "18:00"
+      },
       null
     ],
-    "typicalVisitMinutes": 60
+    "typicalVisitMinutes": 60,
+    "aliases": [
+      "구로몬 시장",
+      "구로몬 이치바 시장"
+    ]
   },
   {
     "id": "umeda-sky-building",
     "name": "Umeda Sky Building",
     "area": "osaka",
     "category": "sight",
-    "location": { "lat": 34.7054, "lng": 135.4909 },
+    "location": {
+      "lat": 34.7054,
+      "lng": 135.4909
+    },
     "openingHours": [
-      { "open": "09:30", "close": "22:30" },
-      { "open": "09:30", "close": "22:30" },
-      { "open": "09:30", "close": "22:30" },
-      { "open": "09:30", "close": "22:30" },
-      { "open": "09:30", "close": "22:30" },
-      { "open": "09:30", "close": "22:30" },
-      { "open": "09:30", "close": "22:30" }
+      {
+        "open": "09:30",
+        "close": "22:30"
+      },
+      {
+        "open": "09:30",
+        "close": "22:30"
+      },
+      {
+        "open": "09:30",
+        "close": "22:30"
+      },
+      {
+        "open": "09:30",
+        "close": "22:30"
+      },
+      {
+        "open": "09:30",
+        "close": "22:30"
+      },
+      {
+        "open": "09:30",
+        "close": "22:30"
+      },
+      {
+        "open": "09:30",
+        "close": "22:30"
+      }
     ],
-    "typicalVisitMinutes": 60
+    "typicalVisitMinutes": 60,
+    "aliases": [
+      "우메다 스카이빌딩"
+    ]
   },
   {
     "id": "shitennoji-temple",
     "name": "Shitennoji Temple",
     "area": "osaka",
     "category": "culture",
-    "location": { "lat": 34.6541, "lng": 135.5163 },
+    "location": {
+      "lat": 34.6541,
+      "lng": 135.5163
+    },
     "openingHours": [
-      { "open": "08:00", "close": "16:00" },
-      { "open": "08:00", "close": "16:00" },
-      { "open": "08:00", "close": "16:00" },
-      { "open": "08:00", "close": "16:00" },
-      { "open": "08:00", "close": "16:00" },
-      { "open": "08:00", "close": "16:00" },
-      { "open": "08:00", "close": "16:00" }
+      {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      {
+        "open": "08:00",
+        "close": "16:00"
+      }
     ],
-    "typicalVisitMinutes": 45
+    "typicalVisitMinutes": 45,
+    "aliases": [
+      "시텐노지"
+    ]
   },
   {
     "id": "osaka-aquarium-kaiyukan",
     "name": "Osaka Aquarium Kaiyukan",
     "area": "osaka",
     "category": "nature",
-    "location": { "lat": 34.6546, "lng": 135.4292 },
+    "location": {
+      "lat": 34.6546,
+      "lng": 135.4292
+    },
     "openingHours": [
-      { "open": "10:00", "close": "20:00" },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
       null,
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" }
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      }
     ],
-    "typicalVisitMinutes": 120
+    "typicalVisitMinutes": 120,
+    "aliases": [
+      "가이유칸",
+      "오사카 아쿠아리움"
+    ]
   },
   {
     "id": "namba-yasaka-shrine",
     "name": "Namba Yasaka Shrine",
     "area": "osaka",
     "category": "culture",
-    "location": { "lat": 34.6626, "lng": 135.5013 },
+    "location": {
+      "lat": 34.6626,
+      "lng": 135.5013
+    },
     "openingHours": [
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" }
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      }
     ],
-    "typicalVisitMinutes": 20
+    "typicalVisitMinutes": 20,
+    "aliases": [
+      "난바 야사카 신사"
+    ]
   },
   {
     "id": "tsutenkaku-tower",
     "name": "Tsutenkaku Tower",
     "area": "osaka",
     "category": "sight",
-    "location": { "lat": 34.6524, "lng": 135.5061 },
+    "location": {
+      "lat": 34.6524,
+      "lng": 135.5061
+    },
     "openingHours": [
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" },
-      { "open": "10:00", "close": "20:00" }
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      },
+      {
+        "open": "10:00",
+        "close": "20:00"
+      }
     ],
-    "typicalVisitMinutes": 45
+    "typicalVisitMinutes": 45,
+    "aliases": [
+      "츠텐카쿠"
+    ]
   },
   {
     "id": "sumiyoshi-taisha",
     "name": "Sumiyoshi Taisha",
     "area": "osaka",
     "category": "culture",
-    "location": { "lat": 34.6122, "lng": 135.4936 },
+    "location": {
+      "lat": 34.6122,
+      "lng": 135.4936
+    },
     "openingHours": [
-      { "open": "06:00", "close": "17:00" },
-      { "open": "06:00", "close": "17:00" },
-      { "open": "06:00", "close": "17:00" },
-      { "open": "06:00", "close": "17:00" },
-      { "open": "06:00", "close": "17:00" },
-      { "open": "06:00", "close": "17:00" },
-      { "open": "06:00", "close": "17:00" }
+      {
+        "open": "06:00",
+        "close": "17:00"
+      },
+      {
+        "open": "06:00",
+        "close": "17:00"
+      },
+      {
+        "open": "06:00",
+        "close": "17:00"
+      },
+      {
+        "open": "06:00",
+        "close": "17:00"
+      },
+      {
+        "open": "06:00",
+        "close": "17:00"
+      },
+      {
+        "open": "06:00",
+        "close": "17:00"
+      },
+      {
+        "open": "06:00",
+        "close": "17:00"
+      }
     ],
-    "typicalVisitMinutes": 45
+    "typicalVisitMinutes": 45,
+    "aliases": [
+      "스미요시타이샤",
+      "스미요시 대사"
+    ]
   },
   {
     "id": "fushimi-inari-taisha",
     "name": "Fushimi Inari Taisha",
     "area": "kyoto",
     "category": "sight",
-    "location": { "lat": 34.9671, "lng": 135.7727 },
+    "location": {
+      "lat": 34.9671,
+      "lng": 135.7727
+    },
     "openingHours": [
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" }
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      }
     ],
-    "typicalVisitMinutes": 90
+    "typicalVisitMinutes": 90,
+    "aliases": [
+      "후시미 이나리",
+      "후시미이나리타이샤"
+    ]
   },
   {
     "id": "kinkaku-ji",
     "name": "Kinkaku-ji",
     "area": "kyoto",
     "category": "culture",
-    "location": { "lat": 35.0394, "lng": 135.7292 },
+    "location": {
+      "lat": 35.0394,
+      "lng": 135.7292
+    },
     "openingHours": [
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" },
-      { "open": "09:00", "close": "17:00" }
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      },
+      {
+        "open": "09:00",
+        "close": "17:00"
+      }
     ],
-    "typicalVisitMinutes": 45
+    "typicalVisitMinutes": 45,
+    "aliases": [
+      "킨카쿠지",
+      "금각사"
+    ]
   },
   {
     "id": "arashiyama-bamboo-grove",
     "name": "Arashiyama Bamboo Grove",
     "area": "kyoto",
     "category": "nature",
-    "location": { "lat": 35.0170, "lng": 135.6685 },
+    "location": {
+      "lat": 35.017,
+      "lng": 135.6685
+    },
     "openingHours": [
-      { "open": "08:00", "close": "17:00" },
-      { "open": "08:00", "close": "17:00" },
-      { "open": "08:00", "close": "17:00" },
-      { "open": "08:00", "close": "17:00" },
-      { "open": "08:00", "close": "17:00" },
-      { "open": "08:00", "close": "17:00" },
-      { "open": "08:00", "close": "17:00" }
+      {
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "open": "08:00",
+        "close": "17:00"
+      }
     ],
-    "typicalVisitMinutes": 40
+    "typicalVisitMinutes": 40,
+    "aliases": [
+      "아라시야마 대나무숲",
+      "아라시야마"
+    ]
   },
   {
     "id": "kiyomizu-dera",
     "name": "Kiyomizu-dera",
     "area": "kyoto",
     "category": "culture",
-    "location": { "lat": 34.9948, "lng": 135.7850 },
+    "location": {
+      "lat": 34.9948,
+      "lng": 135.785
+    },
     "openingHours": [
-      { "open": "06:00", "close": "18:00" },
-      { "open": "06:00", "close": "18:00" },
-      { "open": "06:00", "close": "18:00" },
-      { "open": "06:00", "close": "18:00" },
-      { "open": "06:00", "close": "18:00" },
-      { "open": "06:00", "close": "18:00" },
-      { "open": "06:00", "close": "18:00" }
+      {
+        "open": "06:00",
+        "close": "18:00"
+      },
+      {
+        "open": "06:00",
+        "close": "18:00"
+      },
+      {
+        "open": "06:00",
+        "close": "18:00"
+      },
+      {
+        "open": "06:00",
+        "close": "18:00"
+      },
+      {
+        "open": "06:00",
+        "close": "18:00"
+      },
+      {
+        "open": "06:00",
+        "close": "18:00"
+      },
+      {
+        "open": "06:00",
+        "close": "18:00"
+      }
     ],
-    "typicalVisitMinutes": 60
+    "typicalVisitMinutes": 60,
+    "aliases": [
+      "기요미즈데라",
+      "청수사"
+    ]
   },
   {
     "id": "nishiki-market",
     "name": "Nishiki Market",
     "area": "kyoto",
     "category": "shopping",
-    "location": { "lat": 35.0051, "lng": 135.7649 },
+    "location": {
+      "lat": 35.0051,
+      "lng": 135.7649
+    },
     "openingHours": [
-      { "open": "09:00", "close": "18:00" },
-      { "open": "09:00", "close": "18:00" },
+      {
+        "open": "09:00",
+        "close": "18:00"
+      },
+      {
+        "open": "09:00",
+        "close": "18:00"
+      },
       null,
-      { "open": "09:00", "close": "18:00" },
-      { "open": "09:00", "close": "18:00" },
-      { "open": "09:00", "close": "18:00" },
-      { "open": "09:00", "close": "18:00" }
+      {
+        "open": "09:00",
+        "close": "18:00"
+      },
+      {
+        "open": "09:00",
+        "close": "18:00"
+      },
+      {
+        "open": "09:00",
+        "close": "18:00"
+      },
+      {
+        "open": "09:00",
+        "close": "18:00"
+      }
     ],
-    "typicalVisitMinutes": 60
+    "typicalVisitMinutes": 60,
+    "aliases": [
+      "니시키 시장"
+    ]
   },
   {
     "id": "gion-district",
     "name": "Gion District",
     "area": "kyoto",
     "category": "culture",
-    "location": { "lat": 35.0037, "lng": 135.7756 },
+    "location": {
+      "lat": 35.0037,
+      "lng": 135.7756
+    },
     "openingHours": [
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" }
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      }
     ],
-    "typicalVisitMinutes": 60
+    "typicalVisitMinutes": 60,
+    "aliases": [
+      "기온"
+    ]
   },
   {
     "id": "nijo-castle",
     "name": "Nijo Castle",
     "area": "kyoto",
     "category": "sight",
-    "location": { "lat": 35.0142, "lng": 135.7481 },
+    "location": {
+      "lat": 35.0142,
+      "lng": 135.7481
+    },
     "openingHours": [
-      { "open": "08:45", "close": "17:00" },
+      {
+        "open": "08:45",
+        "close": "17:00"
+      },
       null,
-      { "open": "08:45", "close": "17:00" },
-      { "open": "08:45", "close": "17:00" },
-      { "open": "08:45", "close": "17:00" },
-      { "open": "08:45", "close": "17:00" },
-      { "open": "08:45", "close": "17:00" }
+      {
+        "open": "08:45",
+        "close": "17:00"
+      },
+      {
+        "open": "08:45",
+        "close": "17:00"
+      },
+      {
+        "open": "08:45",
+        "close": "17:00"
+      },
+      {
+        "open": "08:45",
+        "close": "17:00"
+      },
+      {
+        "open": "08:45",
+        "close": "17:00"
+      }
     ],
-    "typicalVisitMinutes": 75
+    "typicalVisitMinutes": 75,
+    "aliases": [
+      "니조성"
+    ]
   },
   {
     "id": "kamo-river",
     "name": "Kamo River",
     "area": "kyoto",
     "category": "nature",
-    "location": { "lat": 35.0212, "lng": 135.7702 },
+    "location": {
+      "lat": 35.0212,
+      "lng": 135.7702
+    },
     "openingHours": [
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" },
-      { "open": "00:00", "close": "23:59" }
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "open": "00:00",
+        "close": "23:59"
+      }
     ],
-    "typicalVisitMinutes": 30
+    "typicalVisitMinutes": 30,
+    "aliases": [
+      "가모가와",
+      "가모 강"
+    ]
   }
 ]

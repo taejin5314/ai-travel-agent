@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Place } from "@/domain/schema/place";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
-import { planTrip, PACE_MAX_ACTIVITIES_PER_DAY } from "@/agent/planTrip";
+import {
+  mapInterestsToCategories,
+  planTrip,
+  PACE_MAX_ACTIVITIES_PER_DAY,
+} from "@/agent/planTrip";
 import { MockPlacesProvider } from "@/providers/mock/places";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { LLM_MODEL_ID, StubLlmProvider } from "@/providers/llm/stub";
@@ -14,6 +18,7 @@ const fixture: Place[] = [
   {
     id: "osaka-castle",
     name: "Osaka Castle",
+    aliases: ["오사카성"],
     area: "osaka",
     category: "sight",
     location: { lat: 34.6873, lng: 135.5262 },
@@ -119,6 +124,51 @@ describe("planTrip", () => {
     }
   });
 
+  it("resolves a partial must-visit name without a spurious internal error", async () => {
+    // Regression: coverage used to be checked against the raw user string
+    // ("castle"), which never equals the scheduled place name exactly.
+    const result = await planTrip(
+      { ...preferences, mustVisit: ["castle"] },
+      makePorts(),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days.flatMap((d) =>
+        d.activities.map((a) => a.placeId),
+      );
+      expect(ids).toContain("osaka-castle");
+    }
+  });
+
+  it("resolves a Korean alias must-visit name", async () => {
+    const result = await planTrip(
+      { ...preferences, mustVisit: ["오사카성"] },
+      makePorts(),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days.flatMap((d) =>
+        d.activities.map((a) => a.placeId),
+      );
+      expect(ids).toContain("osaka-castle");
+    }
+  });
+
+  it("prioritizes Korean interests via category mapping", async () => {
+    // 음식 → food: the market should be scheduled ahead of non-interest places.
+    const result = await planTrip(
+      { ...preferences, mustVisit: [], interests: ["음식"], pace: "relaxed" },
+      makePorts(),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const firstDayIds = result.itinerary.days[0].activities.map(
+        (a) => a.placeId,
+      );
+      expect(firstDayIds[0]).toBe("kuromon-market");
+    }
+  });
+
   it("fails with a clear error when a must-visit place is unknown", async () => {
     const result = await planTrip(
       { ...preferences, mustVisit: ["Atlantis"] },
@@ -136,6 +186,13 @@ describe("planTrip", () => {
       makePorts(),
     );
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("mapInterestsToCategories", () => {
+  it("maps Korean keywords and English category names, ignoring unknowns", () => {
+    const categories = mapInterestsToCategories(["음식", " Shopping ", "우주"]);
+    expect(categories).toEqual(new Set(["food", "shopping"]));
   });
 });
 
