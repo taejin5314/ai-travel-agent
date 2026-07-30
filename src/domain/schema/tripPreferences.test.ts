@@ -71,4 +71,20 @@ describe("TripPreferencesSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects a whitespace-only lodging name", () => {
+    const result = TripPreferencesSchema.safeParse({
+      ...validInput,
+      lodging: { ...validInput.lodging, name: "   " },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a whitespace-only lodging area", () => {
+    const result = TripPreferencesSchema.safeParse({
+      ...validInput,
+      lodging: { ...validInput.lodging, area: "   " },
+    });
+    expect(result.success).toBe(false);
+  });
 });
