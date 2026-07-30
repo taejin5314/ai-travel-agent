@@ -164,7 +164,21 @@ export async function planTrip(
 
     while (activities.length < maxPerDay) {
       let scheduled = false;
-      for (let i = 0; i < queue.length; i++) {
+      // Cluster days geographically: once a day has a place, prefer
+      // candidates in the same area before falling back to the rest, so a
+      // single day never ping-pongs between Osaka and Kyoto unnecessarily.
+      const scanOrder =
+        previous === undefined
+          ? queue.map((_, index) => index)
+          : [
+              ...queue.flatMap((p, index) =>
+                p.area === previous?.area ? [index] : [],
+              ),
+              ...queue.flatMap((p, index) =>
+                p.area !== previous?.area ? [index] : [],
+              ),
+            ];
+      for (const i of scanOrder) {
         const candidate = queue[i];
         const window = candidate.openingHours[dayOfWeek];
         if (window === null) {
