@@ -39,6 +39,7 @@ export type PlanFormState =
       data: TripPreferences;
       itinerary?: ItineraryViewDay[];
       planningNotice?: string;
+      dataSource?: "google" | "mock";
     }
   | { status: "error"; errors: string[]; values: PlanFormValues };
 
