@@ -22,6 +22,12 @@ export class MockPlacesProvider implements PlacesPort {
 
   async findPlacesByName(query: string): Promise<Place[]> {
     const needle = query.trim().toLowerCase();
-    return this.places.filter((place) => place.name.toLowerCase().includes(needle));
+    return this.places.filter(
+      (place) =>
+        place.name.toLowerCase().includes(needle) ||
+        (place.aliases ?? []).some((alias) =>
+          alias.toLowerCase().includes(needle),
+        ),
+    );
   }
 }

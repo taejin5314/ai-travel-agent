@@ -23,15 +23,15 @@ const validFields = {
 };
 
 describe("submitTripPreferences", () => {
-  it("returns the parsed TripPreferences on success", async () => {
+  it("returns the parsed TripPreferences and a generated itinerary on success", async () => {
     const result = await submitTripPreferences(
       initialPlanFormState,
       buildFormData(validFields),
     );
 
-    expect(result).toEqual({
-      status: "success",
-      data: {
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.data).toEqual({
         startDate: "2026-08-01",
         endDate: "2026-08-05",
         lodging: { name: "Hotel Osaka", area: "Namba" },
@@ -40,8 +40,31 @@ describe("submitTripPreferences", () => {
         interests: ["food"],
         pace: "balanced",
         constraints: undefined,
-      },
-    });
+      });
+      expect(result.planningNotice).toBeUndefined();
+      expect(result.itinerary).toBeDefined();
+      if (result.itinerary) {
+        expect(result.itinerary).toHaveLength(5);
+        const names = result.itinerary.flatMap((day) =>
+          day.items.map((item) => item.placeName),
+        );
+        expect(names).toContain("Osaka Castle");
+        expect(names).toContain("Dotonbori");
+      }
+    }
+  });
+
+  it("returns a planning notice instead of an itinerary when a must-visit place is unknown", async () => {
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData({ ...validFields, mustVisit: "Osaka Castle, Atlantis" }),
+    );
+
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.itinerary).toBeUndefined();
+      expect(result.planningNotice).toContain("Atlantis");
+    }
   });
 
   it("returns Korean field errors when the shape is invalid (schema failure)", async () => {

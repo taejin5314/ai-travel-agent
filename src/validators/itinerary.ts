@@ -3,13 +3,13 @@ import type { Place } from "@/domain/schema/place";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import type { ValidationResult } from "@/validators/tripPreferences";
 
-function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":");
   return Number(hours) * 60 + Number(minutes);
 }
 
 // Place.openingHours is a Mon..Sun tuple (index 0-6); JS getUTCDay is Sun=0.
-function weekdayIndex(isoDate: string): number {
+export function weekdayIndex(isoDate: string): number {
   return (new Date(`${isoDate}T00:00:00Z`).getUTCDay() + 6) % 7;
 }
 
