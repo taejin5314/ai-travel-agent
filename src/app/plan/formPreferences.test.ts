@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTripPreferencesCandidate,
+  extractFormValues,
   translateSchemaErrors,
   translateValidationErrors,
 } from "@/app/plan/formPreferences";
@@ -79,6 +80,26 @@ describe("buildTripPreferencesCandidate", () => {
   });
 });
 
+describe("extractFormValues", () => {
+  it("returns the raw submitted strings, unsplit, for restoring the form after an error", () => {
+    const values = extractFormValues(
+      buildFormData({ ...validFields, mustVisit: " Osaka Castle ,\nDotonbori,, " }),
+    );
+
+    expect(values).toEqual({
+      startDate: "2026-08-01",
+      endDate: "2026-08-05",
+      lodgingName: "Hotel Osaka",
+      lodgingArea: "Namba",
+      partySize: "2",
+      mustVisit: "Osaka Castle ,\nDotonbori,,",
+      interests: "food\nshopping",
+      pace: "balanced",
+      constraints: "",
+    });
+  });
+});
+
 describe("translateSchemaErrors", () => {
   it("returns a Korean message referencing the offending field", () => {
     const result = TripPreferencesSchema.safeParse(
@@ -106,6 +127,13 @@ describe("translateValidationErrors", () => {
     ]);
     expect(messages[0]).toContain("Osaka Castle");
     expect(messages[0]).toContain("중복");
+  });
+
+  it("translates the trip-length-exceeded business error", () => {
+    const messages = translateValidationErrors([
+      "Trip length (35 days) exceeds the maximum of 30 days.",
+    ]);
+    expect(messages).toEqual(["여행 기간이 최대 허용 일수(30일)를 초과했습니다."]);
   });
 
   it("translates the partySize-out-of-range business error", () => {

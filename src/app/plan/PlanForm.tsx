@@ -26,6 +26,8 @@ export function PlanForm() {
     return <PlanSummary data={state.data} />;
   }
 
+  const values = state.status === "error" ? state.values : undefined;
+
   return (
     <form action={formAction} className="flex w-full flex-col gap-5">
       <div className="grid grid-cols-2 gap-3">
@@ -35,6 +37,7 @@ export function PlanForm() {
             type="date"
             name="startDate"
             required
+            defaultValue={values?.startDate}
             className={inputClassName}
           />
         </label>
@@ -44,6 +47,7 @@ export function PlanForm() {
             type="date"
             name="endDate"
             required
+            defaultValue={values?.endDate}
             className={inputClassName}
           />
         </label>
@@ -56,6 +60,7 @@ export function PlanForm() {
           name="lodgingName"
           required
           placeholder="예: 호텔 오사카"
+          defaultValue={values?.lodgingName}
           className={inputClassName}
         />
       </label>
@@ -67,6 +72,7 @@ export function PlanForm() {
           name="lodgingArea"
           required
           placeholder="예: 난바"
+          defaultValue={values?.lodgingArea}
           className={inputClassName}
         />
       </label>
@@ -79,7 +85,7 @@ export function PlanForm() {
           inputMode="numeric"
           min={1}
           required
-          defaultValue={1}
+          defaultValue={values?.partySize ?? 1}
           className={inputClassName}
         />
       </label>
@@ -90,6 +96,7 @@ export function PlanForm() {
           name="mustVisit"
           rows={2}
           placeholder="쉼표 또는 줄바꿈으로 구분 (예: 오사카성, 도톤보리)"
+          defaultValue={values?.mustVisit}
           className={inputClassName}
         />
       </label>
@@ -100,6 +107,7 @@ export function PlanForm() {
           name="interests"
           rows={2}
           placeholder="쉼표 또는 줄바꿈으로 구분 (예: 음식, 쇼핑)"
+          defaultValue={values?.interests}
           className={inputClassName}
         />
       </label>
@@ -116,7 +124,9 @@ export function PlanForm() {
                 type="radio"
                 name="pace"
                 value={option.value}
-                defaultChecked={index === 1}
+                defaultChecked={
+                  values ? values.pace === option.value : index === 1
+                }
                 className="sr-only"
               />
               {option.label}
@@ -131,6 +141,7 @@ export function PlanForm() {
           name="constraints"
           rows={2}
           placeholder="쉼표 또는 줄바꿈으로 구분 (예: 이른 아침 일정 제외)"
+          defaultValue={values?.constraints}
           className={inputClassName}
         />
       </label>
