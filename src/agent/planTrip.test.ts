@@ -7,6 +7,7 @@ import {
   PACE_MAX_ACTIVITIES_PER_DAY,
   ratingScore,
 } from "@/agent/planTrip";
+import type { RoutesPort } from "@/providers/ports";
 import { MockPlacesProvider } from "@/providers/mock/places";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { LLM_MODEL_ID, StubLlmProvider } from "@/providers/llm/stub";
@@ -469,6 +470,152 @@ describe("ratingScore", () => {
 
   it("scores unrated places lowest", () => {
     expect(ratingScore(base)).toBe(0);
+  });
+});
+
+describe("planTrip travel legs", () => {
+  const hotel: Place = {
+    id: "hotel-namba",
+    name: "Hotel Namba",
+    area: "osaka",
+    category: "lodging",
+    location: { lat: 34.6664, lng: 135.5013 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 1,
+  };
+  // ~100 m from the hotel: comfortably under MAX_WALK_MINUTES.
+  const nearby: Place = {
+    id: "nearby-sight",
+    name: "Nearby Sight",
+    area: "osaka",
+    category: "sight",
+    location: { lat: 34.667, lng: 135.502 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 60,
+  };
+  // Kyoto: far enough that walking is out of the question.
+  const faraway: Place = {
+    id: "faraway-sight",
+    name: "Faraway Sight",
+    area: "kyoto",
+    category: "culture",
+    location: { lat: 34.9671, lng: 135.7727 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 60,
+  };
+  const oneDay: TripPreferences = {
+    ...preferences,
+    endDate: preferences.startDate,
+    mustVisit: [],
+    interests: [],
+  };
+
+  function plan(overrides: Partial<TripPreferences> = {}) {
+    return planTrip(
+      { ...oneDay, ...overrides },
+      {
+        places: new MockPlacesProvider([hotel, nearby, faraway]),
+        routes: new MockRoutesProvider(),
+      },
+    );
+  }
+
+  it("records the mode the planner actually chose for each hop", async () => {
+    const result = await plan();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const [first, second] = result.itinerary.days[0].activities;
+      expect(first.placeId).toBe("nearby-sight");
+      expect(first.travel?.mode).toBe("walk");
+      expect(second.placeId).toBe("faraway-sight");
+      expect(second.travel?.mode).toBe("transit");
+      expect(second.travel!.minutes).toBeGreaterThan(first.travel!.minutes);
+    }
+  });
+
+  it("reports every leg as a positive whole number of minutes", async () => {
+    const result = await plan();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      for (const activity of result.itinerary.days[0].activities) {
+        if (activity.travel !== undefined) {
+          expect(Number.isInteger(activity.travel.minutes)).toBe(true);
+          expect(activity.travel.minutes).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it("gives the first stop of a day the leg from the lodging", async () => {
+    const result = await plan();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.itinerary.days[0].activities[0].travel).toBeDefined();
+    }
+  });
+
+  it("omits the leg when a stop follows itself", async () => {
+    // With one restaurant and no attractions, the meal pool falls back to
+    // revisiting it, so dinner follows lunch at the same place. Both route
+    // providers answer 1 minute for identical ids, which would otherwise show
+    // up as a fictitious one-minute walk.
+    const eats = { open: "11:00", close: "22:00" };
+    const onlyRestaurant: Place = {
+      id: "solo-diner",
+      name: "Solo Diner",
+      area: "osaka",
+      category: "restaurant",
+      location: { lat: 34.6688, lng: 135.5014 },
+      openingHours: [eats, eats, eats, eats, eats, eats, eats],
+      typicalVisitMinutes: 45,
+      rating: 4.5,
+    };
+    const result = await planTrip(oneDay, {
+      places: new MockPlacesProvider([hotel, onlyRestaurant]),
+      routes: new MockRoutesProvider(),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const activities = result.itinerary.days[0].activities;
+      expect(activities.map((a) => a.placeId)).toEqual([
+        "solo-diner",
+        "solo-diner",
+      ]);
+      expect(activities[1].travel).toBeUndefined();
+    }
+  });
+
+  it("omits a leg a provider reports as zero minutes", async () => {
+    // The port documents a positive integer and both shipped providers floor
+    // at 1, but provider output is untrusted (AGENTS.md §7): a zero must not
+    // become a TravelLeg, which requires minutes > 0.
+    class ZeroRoutesProvider implements RoutesPort {
+      async travelMinutes(): Promise<number> {
+        return 0;
+      }
+    }
+    const result = await planTrip(oneDay, {
+      places: new MockPlacesProvider([hotel, nearby, faraway]),
+      routes: new ZeroRoutesProvider(),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      for (const activity of result.itinerary.days[0].activities) {
+        expect(activity.travel).toBeUndefined();
+      }
+    }
+  });
+
+  it("omits the leg on the first stop when the lodging is not in the catalog", async () => {
+    // Free-text lodging stays supported: there is simply nowhere to depart
+    // from, so the itinerary must not invent a hop.
+    const result = await plan({
+      lodging: { name: "어딘가의 숙소", area: "Namba" },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.itinerary.days[0].activities[0].travel).toBeUndefined();
+    }
   });
 });
 

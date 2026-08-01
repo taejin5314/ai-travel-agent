@@ -1,5 +1,6 @@
 import type { Activity, DayPlan, Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
+import type { TravelLeg } from "@/domain/schema/travel";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import type { PlacesPort, RoutesPort } from "@/providers/ports";
 import {
@@ -124,16 +125,36 @@ export function mapInterestsToCategories(
   return categories;
 }
 
+/**
+ * The hop the planner would actually take: walk when it is short enough,
+ * otherwise transit. Returns `undefined` when there is no hop to make, so the
+ * itinerary never carries a leg the traveller does not travel.
+ */
 async function travelBetween(
   routes: RoutesPort,
   from: Place,
   to: Place,
-): Promise<number> {
+): Promise<TravelLeg | undefined> {
+  // Staying put is not a hop. A revisited restaurant can follow itself when
+  // the pool runs dry on a long trip, and both providers floor at 1 minute
+  // (mock via Math.max, Google via an explicit same-id shortcut) — without
+  // this guard that would surface as a fictitious 1-minute walk.
+  if (from.id === to.id) {
+    return undefined;
+  }
   const walk = await routes.travelMinutes(from, to, "walk");
   if (walk <= MAX_WALK_MINUTES) {
-    return walk;
+    // Providers are external and untrusted (AGENTS.md §7): the port documents
+    // a positive integer, but a zero would silently violate TravelLegSchema,
+    // so drop it here rather than emit an invalid leg.
+    return walk > 0 ? { minutes: walk, mode: "walk" } : undefined;
   }
-  return routes.travelMinutes(from, to, "transit");
+  const transit = await routes.travelMinutes(from, to, "transit");
+  return transit > 0 ? { minutes: transit, mode: "transit" } : undefined;
+}
+
+function legMinutes(leg: TravelLeg | undefined): number {
+  return leg?.minutes ?? 0;
 }
 
 /**
@@ -227,9 +248,13 @@ export async function planTrip(
       }
       const travel =
         previous === undefined
-          ? 0
+          ? undefined
           : await travelBetween(ports.routes, previous, candidate);
-      const start = Math.max(clock + travel, earliest, timeToMinutes(window.open));
+      const start = Math.max(
+        clock + legMinutes(travel),
+        earliest,
+        timeToMinutes(window.open),
+      );
       const end = start + candidate.typicalVisitMinutes;
       if (end > Math.min(timeToMinutes(window.close), MEAL_HARD_END_MINUTES)) {
         continue;
@@ -240,6 +265,7 @@ export async function planTrip(
           placeId: candidate.id,
           start: minutesToTime(start),
           end: minutesToTime(end),
+          ...(travel !== undefined && { travel }),
         },
         place: candidate,
         end,
@@ -305,9 +331,12 @@ export async function planTrip(
         }
         const travel =
           previous === undefined
-            ? 0
+            ? undefined
             : await travelBetween(ports.routes, previous, candidate);
-        const start = Math.max(clock + travel, timeToMinutes(window.open));
+        const start = Math.max(
+          clock + legMinutes(travel),
+          timeToMinutes(window.open),
+        );
         const end = start + candidate.typicalVisitMinutes;
         if (end > Math.min(timeToMinutes(window.close), DAY_END_MINUTES)) {
           continue;
@@ -316,6 +345,7 @@ export async function planTrip(
           placeId: candidate.id,
           start: minutesToTime(start),
           end: minutesToTime(end),
+          ...(travel !== undefined && { travel }),
         });
         queue.splice(i, 1);
         previous = candidate;

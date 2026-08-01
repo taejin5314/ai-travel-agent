@@ -1,9 +1,13 @@
 import type { z } from "zod";
 import type { Place, PlaceAreaSchema } from "@/domain/schema/place";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
+import type { TravelMode } from "@/domain/schema/travel";
 
 export type PlaceArea = z.infer<typeof PlaceAreaSchema>;
-export type TravelMode = "walk" | "transit";
+// Re-exported, not declared here: an Activity records the mode of the hop that
+// reached it, so the union belongs in domain. Providers may depend on domain,
+// never the reverse.
+export type { TravelMode };
 
 export interface PlacesPort {
   listPlaces(area?: PlaceArea): Promise<Place[]>;

@@ -32,23 +32,31 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
               <p className="text-sm text-zinc-500">자유 시간</p>
             ) : (
               <ul className="flex flex-col gap-1 text-sm">
-                {day.items.map((item) => (
-                  <li
-                    key={`${day.date}-${item.start}`}
-                    className="flex justify-between gap-4"
-                  >
-                    <span>
-                      {item.kind === "meal" ? "🍽️ " : ""}
-                      {item.placeName}
-                      {item.rating !== undefined && (
-                        <span className="ml-1 text-xs text-zinc-500">
-                          ★ {item.rating.toFixed(1)}
-                        </span>
-                      )}
-                    </span>
-                    <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
-                      {item.start}–{item.end}
-                    </span>
+                {day.items.map((item, itemIndex) => (
+                  <li key={`${day.date}-${item.start}`}>
+                    {/* The leg that reaches this stop, so the gap before it is
+                        explained rather than looking like dead time. The first
+                        stop of a day has nothing above it to travel from. */}
+                    {itemIndex > 0 && item.travel !== undefined && (
+                      <p className="py-0.5 text-xs text-zinc-500">
+                        {item.travel.mode === "walk" ? "🚶" : "🚃"}{" "}
+                        {item.travel.minutes}분 이동
+                      </p>
+                    )}
+                    <div className="flex justify-between gap-4">
+                      <span>
+                        {item.kind === "meal" ? "🍽️ " : ""}
+                        {item.placeName}
+                        {item.rating !== undefined && (
+                          <span className="ml-1 text-xs text-zinc-500">
+                            ★ {item.rating.toFixed(1)}
+                          </span>
+                        )}
+                      </span>
+                      <span className="tabular-nums text-zinc-600 dark:text-zinc-400">
+                        {item.start}–{item.end}
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>

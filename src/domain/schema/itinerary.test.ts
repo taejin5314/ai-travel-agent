@@ -29,6 +29,41 @@ describe("ActivitySchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts an optional travel leg", () => {
+    const result = ActivitySchema.safeParse({
+      ...validActivity,
+      travel: { minutes: 24, mode: "transit" },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a travel leg of zero minutes", () => {
+    // "No travel" is expressed by omitting the leg, never by storing 0.
+    const result = ActivitySchema.safeParse({
+      ...validActivity,
+      travel: { minutes: 0, mode: "walk" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative or fractional travel minutes", () => {
+    for (const minutes of [-5, 12.5]) {
+      const result = ActivitySchema.safeParse({
+        ...validActivity,
+        travel: { minutes, mode: "walk" },
+      });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it("rejects an unknown travel mode", () => {
+    const result = ActivitySchema.safeParse({
+      ...validActivity,
+      travel: { minutes: 10, mode: "taxi" },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects a bad time format for start", () => {
     const result = ActivitySchema.safeParse({ ...validActivity, start: "9am" });
     expect(result.success).toBe(false);
