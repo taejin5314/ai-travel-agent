@@ -1,8 +1,6 @@
 "use server";
 
 import { planTrip } from "@/agent/planTrip";
-import type { Itinerary } from "@/domain/schema/itinerary";
-import type { Place } from "@/domain/schema/place";
 import { TripPreferencesSchema } from "@/domain/schema/tripPreferences";
 import { googleMapsApiKey } from "@/lib/config";
 import { GooglePlacesProvider } from "@/providers/google/places";
@@ -11,11 +9,11 @@ import { MockPlacesProvider } from "@/providers/mock/places";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { validateTripPreferences } from "@/validators/tripPreferences";
 import {
+  buildItineraryView,
   buildTripPreferencesCandidate,
   extractFormValues,
   translateSchemaErrors,
   translateValidationErrors,
-  type ItineraryViewDay,
   type PlanFormState,
 } from "./formPreferences";
 
@@ -39,28 +37,6 @@ function buildPorts() {
   };
 }
 const ports = buildPorts();
-
-function buildItineraryView(
-  itinerary: Itinerary,
-  places: Place[],
-): ItineraryViewDay[] {
-  const placeById = new Map(places.map((p) => [p.id, p]));
-  return itinerary.days.map((day) => ({
-    date: day.date,
-    items: day.activities.map((activity) => {
-      const place = placeById.get(activity.placeId);
-      return {
-        placeName: place?.name ?? activity.placeId,
-        start: activity.start,
-        end: activity.end,
-        kind: (place?.category === "restaurant" ? "meal" : "visit") as
-          | "meal"
-          | "visit",
-        rating: place?.rating,
-      };
-    }),
-  }));
-}
 
 export async function submitTripPreferences(
   _prevState: PlanFormState,

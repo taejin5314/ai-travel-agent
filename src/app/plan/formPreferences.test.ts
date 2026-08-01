@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildItineraryView,
   buildTripPreferencesCandidate,
   extractFormValues,
   translateSchemaErrors,
   translateValidationErrors,
 } from "@/app/plan/formPreferences";
+import type { Place } from "@/domain/schema/place";
 import { TripPreferencesSchema } from "@/domain/schema/tripPreferences";
 
 function buildFormData(fields: Record<string, string>): FormData {
@@ -146,5 +148,73 @@ describe("translateValidationErrors", () => {
   it("falls back to the original message for unrecognized errors", () => {
     const messages = translateValidationErrors(["some unmapped error."]);
     expect(messages).toEqual(["some unmapped error."]);
+  });
+});
+
+describe("buildItineraryView", () => {
+  const open = { open: "09:00", close: "18:00" };
+  const places: Place[] = [
+    {
+      id: "castle",
+      name: "Osaka Castle",
+      area: "osaka",
+      category: "sight",
+      location: { lat: 34.6873, lng: 135.5262 },
+      openingHours: [open, open, open, open, open, open, open],
+      typicalVisitMinutes: 120,
+      rating: 4.4,
+    },
+    {
+      id: "ramen",
+      name: "Osaka Ramen",
+      area: "osaka",
+      category: "restaurant",
+      location: { lat: 34.6688, lng: 135.5014 },
+      openingHours: [open, open, open, open, open, open, open],
+      typicalVisitMinutes: 45,
+    },
+  ];
+
+  const itinerary = {
+    days: [
+      {
+        date: "2026-10-05",
+        activities: [
+          { placeId: "castle", start: "09:30", end: "11:30" },
+          {
+            placeId: "ramen",
+            start: "12:11",
+            end: "12:56",
+            travel: { minutes: 41, mode: "transit" as const },
+          },
+        ],
+      },
+    ],
+  };
+
+  it("carries the travel leg through to the view", () => {
+    const [day] = buildItineraryView(itinerary, places);
+    expect(day.items[0].travel).toBeUndefined();
+    expect(day.items[1].travel).toEqual({ minutes: 41, mode: "transit" });
+  });
+
+  it("resolves names, ratings, and meal kind", () => {
+    const [day] = buildItineraryView(itinerary, places);
+    expect(day.items[0]).toMatchObject({
+      placeName: "Osaka Castle",
+      kind: "visit",
+      rating: 4.4,
+    });
+    expect(day.items[1]).toMatchObject({
+      placeName: "Osaka Ramen",
+      kind: "meal",
+    });
+    expect(day.items[1].rating).toBeUndefined();
+  });
+
+  it("falls back to the place id when a place is missing from the catalog", () => {
+    const [day] = buildItineraryView(itinerary, []);
+    expect(day.items[0].placeName).toBe("castle");
+    expect(day.items[0].kind).toBe("visit");
   });
 });

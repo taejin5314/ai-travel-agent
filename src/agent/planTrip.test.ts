@@ -472,6 +472,100 @@ describe("ratingScore", () => {
   });
 });
 
+describe("planTrip travel legs", () => {
+  const hotel: Place = {
+    id: "hotel-namba",
+    name: "Hotel Namba",
+    area: "osaka",
+    category: "lodging",
+    location: { lat: 34.6664, lng: 135.5013 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 1,
+  };
+  // ~100 m from the hotel: comfortably under MAX_WALK_MINUTES.
+  const nearby: Place = {
+    id: "nearby-sight",
+    name: "Nearby Sight",
+    area: "osaka",
+    category: "sight",
+    location: { lat: 34.667, lng: 135.502 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 60,
+  };
+  // Kyoto: far enough that walking is out of the question.
+  const faraway: Place = {
+    id: "faraway-sight",
+    name: "Faraway Sight",
+    area: "kyoto",
+    category: "culture",
+    location: { lat: 34.9671, lng: 135.7727 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 60,
+  };
+  const oneDay: TripPreferences = {
+    ...preferences,
+    endDate: preferences.startDate,
+    mustVisit: [],
+    interests: [],
+  };
+
+  function plan(overrides: Partial<TripPreferences> = {}) {
+    return planTrip(
+      { ...oneDay, ...overrides },
+      {
+        places: new MockPlacesProvider([hotel, nearby, faraway]),
+        routes: new MockRoutesProvider(),
+      },
+    );
+  }
+
+  it("records the mode the planner actually chose for each hop", async () => {
+    const result = await plan();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const [first, second] = result.itinerary.days[0].activities;
+      expect(first.placeId).toBe("nearby-sight");
+      expect(first.travel?.mode).toBe("walk");
+      expect(second.placeId).toBe("faraway-sight");
+      expect(second.travel?.mode).toBe("transit");
+      expect(second.travel!.minutes).toBeGreaterThan(first.travel!.minutes);
+    }
+  });
+
+  it("reports every leg as a positive whole number of minutes", async () => {
+    const result = await plan();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      for (const activity of result.itinerary.days[0].activities) {
+        if (activity.travel !== undefined) {
+          expect(Number.isInteger(activity.travel.minutes)).toBe(true);
+          expect(activity.travel.minutes).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it("gives the first stop of a day the leg from the lodging", async () => {
+    const result = await plan();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.itinerary.days[0].activities[0].travel).toBeDefined();
+    }
+  });
+
+  it("omits the leg on the first stop when the lodging is not in the catalog", async () => {
+    // Free-text lodging stays supported: there is simply nowhere to depart
+    // from, so the itinerary must not invent a hop.
+    const result = await plan({
+      lodging: { name: "어딘가의 숙소", area: "Namba" },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.itinerary.days[0].activities[0].travel).toBeUndefined();
+    }
+  });
+});
+
 describe("mapInterestsToCategories", () => {
   it("maps Korean keywords and English category names, ignoring unknowns", () => {
     const categories = mapInterestsToCategories(["음식", " Shopping ", "우주"]);

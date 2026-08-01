@@ -1,4 +1,7 @@
 import type { ZodError } from "zod";
+import type { Itinerary } from "@/domain/schema/itinerary";
+import type { Place } from "@/domain/schema/place";
+import type { TravelLeg } from "@/domain/schema/travel";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 
 // Mirrors the bounds enforced by validateTripPreferences (src/validators/tripPreferences.ts).
@@ -29,8 +32,37 @@ export type ItineraryViewDay = {
     end: string;
     kind: "visit" | "meal";
     rating?: number;
+    /** Hop taken to reach this stop; absent on the first stop of a day. */
+    travel?: TravelLeg;
   }[];
 };
+
+/**
+ * Resolves an itinerary's place ids to the names, ratings and legs the summary
+ * renders. Lives here rather than in the server action so it stays a plain
+ * exported function that can be unit-tested ("use server" modules may only
+ * export async functions).
+ */
+export function buildItineraryView(
+  itinerary: Itinerary,
+  places: readonly Place[],
+): ItineraryViewDay[] {
+  const placeById = new Map(places.map((p) => [p.id, p]));
+  return itinerary.days.map((day) => ({
+    date: day.date,
+    items: day.activities.map((activity) => {
+      const place = placeById.get(activity.placeId);
+      return {
+        placeName: place?.name ?? activity.placeId,
+        start: activity.start,
+        end: activity.end,
+        kind: place?.category === "restaurant" ? ("meal" as const) : ("visit" as const),
+        rating: place?.rating,
+        travel: activity.travel,
+      };
+    }),
+  }));
+}
 
 export type PlanFormState =
   | { status: "idle" }
