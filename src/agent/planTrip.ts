@@ -276,22 +276,24 @@ export async function planTrip(
         continue;
       }
       let scheduled = false;
-      // Scan order, highest priority first:
-      //  0. unscheduled must-visits — they must never be starved by area
-      //     preference (with a large catalog the same-area pool never drains,
-      //     which would strand a must-visit in the other city);
-      //  1. same area as the previous stop — clusters the rest of the day
+      // Scan order, highest priority first. Two independent signals, ranked
+      // must-visit first and area second:
+      //  0. unscheduled must-visit in the current area;
+      //  1. unscheduled must-visit elsewhere — must-visits outrank every
+      //     optional place so area preference can never starve them (with a
+      //     large catalog the same-area pool never drains, which would strand
+      //     a must-visit in the other city);
+      //  2. optional place in the current area — clusters the rest of the day
       //     around whatever anchored it, avoiding Osaka-Kyoto ping-pong;
-      //  2. everything else.
+      //  3. everything else.
+      // Ranking area *within* each tier keeps must-visits from ping-ponging
+      // between cities just because that is the order they were typed in.
       const scanOrder = queue
         .map((place, index) => {
-          if (mustVisitIds.has(place.id)) {
-            return { index, priority: 0 };
-          }
-          if (previous !== undefined && place.area === previous.area) {
-            return { index, priority: 1 };
-          }
-          return { index, priority: 2 };
+          const mustVisitRank = mustVisitIds.has(place.id) ? 0 : 2;
+          const areaRank =
+            previous !== undefined && place.area === previous.area ? 0 : 1;
+          return { index, priority: mustVisitRank + areaRank };
         })
         .sort((a, b) => a.priority - b.priority || a.index - b.index)
         .map((entry) => entry.index);

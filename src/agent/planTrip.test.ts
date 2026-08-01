@@ -229,6 +229,43 @@ describe("planTrip area clustering", () => {
       }
     }
   });
+
+  it("groups must-visits by area instead of following input order", async () => {
+    // Regression: must-visits outrank area preference so they are never
+    // starved, but ranking them purely by input order made an alternating
+    // list (Osaka, Kyoto, Osaka) ping-pong across cities inside one day.
+    const lodging: Place = {
+      id: "hotel-namba",
+      name: "Hotel Namba",
+      area: "osaka",
+      category: "lodging",
+      location: { lat: 34.6664, lng: 135.5013 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 1,
+    };
+    const result = await planTrip(
+      {
+        ...preferences,
+        startDate: "2026-10-05",
+        endDate: "2026-10-05",
+        mustVisit: ["Osaka Castle", "Fushimi Inari Taisha", "Kuromon Market"],
+        interests: [],
+      },
+      {
+        places: new MockPlacesProvider([...fixture, lodging]),
+        routes: new MockRoutesProvider(),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids).toEqual([
+        "osaka-castle",
+        "kuromon-market",
+        "fushimi-inari",
+      ]);
+    }
+  });
 });
 
 describe("planTrip meals, ratings, and lodging anchor", () => {

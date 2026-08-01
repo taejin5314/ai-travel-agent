@@ -149,7 +149,16 @@ function toOpeningHours(place: GooglePlace): Place["openingHours"] {
   // Google encodes "open 24 hours, every day" as ONE period starting Sunday
   // 00:00 with no close. Read literally that would mark the place closed six
   // days a week (this stranded Fushimi Inari, open 24/7, in real data).
-  if (periods.length === 1 && periods[0].close === undefined) {
+  // Match that exact shape only: a lone open-ended period on some other day
+  // is a data anomaly, not 24/7, and falls through to the per-day loop below.
+  const only = periods.length === 1 ? periods[0] : undefined;
+  if (
+    only !== undefined &&
+    only.close === undefined &&
+    only.open.day === 0 &&
+    only.open.hour === 0 &&
+    only.open.minute === 0
+  ) {
     return [allDay, allDay, allDay, allDay, allDay, allDay, allDay];
   }
   const week: (null | { open: string; close: string })[] = [

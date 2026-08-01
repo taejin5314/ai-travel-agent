@@ -135,6 +135,29 @@ describe("GooglePlacesProvider", () => {
     });
   });
 
+  it("does not read a lone non-Sunday open-ended period as 24/7", async () => {
+    // Only Google's documented 24/7 shape (Sunday 00:00, no close) means
+    // "always open". A single open-ended Wednesday period is a data anomaly
+    // and must stay a Wednesday-only window.
+    const anomaly = {
+      ...alwaysOpenPlace,
+      id: "gp-anomaly",
+      regularOpeningHours: {
+        periods: [{ open: { day: 3, hour: 9, minute: 0 } }],
+      },
+    };
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({ places: [anomaly] }),
+    });
+    const places = await provider.findPlacesByName("anomaly");
+    expect(places[0].openingHours[2]).toEqual({
+      open: "09:00",
+      close: "23:59",
+    });
+    expect(places[0].openingHours.filter((w) => w !== null)).toHaveLength(1);
+  });
+
   it("sends the API key and field mask headers, never in the URL", async () => {
     const calls: FetchCall[] = [];
     const provider = new GooglePlacesProvider({
