@@ -33,15 +33,26 @@ const KANSAI_BIAS = {
   },
 };
 
+/**
+ * A single "best restaurants" query returns a narrow, tourist-facing slice
+ * (verified against live data: every meal slot filled with the same handful
+ * of 4.9-rated halal spots). Cuisine-specific queries widen the pool enough
+ * for the confidence-weighted ranking to have real choices. Each entry is
+ * one billed request per area, cached for the process lifetime.
+ */
 const CATALOG_QUERIES: Record<PlaceArea, string[]> = {
   osaka: [
     "top tourist attractions in Osaka Japan",
-    "best restaurants in Osaka Japan",
+    "popular local restaurants in Osaka Japan",
+    "famous ramen restaurants in Osaka",
+    "okonomiyaki and takoyaki restaurants in Osaka",
     "hotels in Osaka Japan",
   ],
   kyoto: [
     "top tourist attractions in Kyoto Japan",
-    "best restaurants in Kyoto Japan",
+    "popular local restaurants in Kyoto Japan",
+    "traditional kaiseki and soba restaurants in Kyoto",
+    "famous ramen restaurants in Kyoto",
     "hotels in Kyoto Japan",
   ],
 };
@@ -131,8 +142,14 @@ function pad(value: number): string {
  */
 function toOpeningHours(place: GooglePlace): Place["openingHours"] {
   const periods = place.regularOpeningHours?.periods;
+  const allDay = { open: "00:00", close: "23:59" };
   if (periods === undefined || periods.length === 0) {
-    const allDay = { open: "00:00", close: "23:59" };
+    return [allDay, allDay, allDay, allDay, allDay, allDay, allDay];
+  }
+  // Google encodes "open 24 hours, every day" as ONE period starting Sunday
+  // 00:00 with no close. Read literally that would mark the place closed six
+  // days a week (this stranded Fushimi Inari, open 24/7, in real data).
+  if (periods.length === 1 && periods[0].close === undefined) {
     return [allDay, allDay, allDay, allDay, allDay, allDay, allDay];
   }
   const week: (null | { open: string; close: string })[] = [

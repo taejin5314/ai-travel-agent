@@ -80,13 +80,30 @@ const INTEREST_KEYWORDS: Record<Place["category"], readonly string[]> = {
   lodging: [],
 };
 
-function ratingOf(place: Place): number {
-  return place.rating ?? 0;
+/**
+ * Confidence-weighted rating (Bayesian average). A 4.9 from 30 reviews is
+ * weaker evidence than a 4.5 from 60,000, so scores shrink toward the prior
+ * until enough reviews accumulate. Without this, real Google data fills every
+ * meal slot with tiny tourist-facing restaurants sitting at a nominal 4.9.
+ */
+const RATING_PRIOR = 4.2;
+const RATING_PRIOR_WEIGHT = 300;
+
+export function ratingScore(place: Place): number {
+  const rating = place.rating;
+  if (rating === undefined) {
+    return 0;
+  }
+  const reviews = place.reviewCount ?? 0;
+  return (
+    (reviews * rating + RATING_PRIOR_WEIGHT * RATING_PRIOR) /
+    (reviews + RATING_PRIOR_WEIGHT)
+  );
 }
 
-/** Higher rating first; stable for equal ratings (keeps fixture order). */
+/** Higher confidence-weighted rating first; stable for ties. */
 function byRatingDesc(a: Place, b: Place): number {
-  return ratingOf(b) - ratingOf(a);
+  return ratingScore(b) - ratingScore(a);
 }
 
 export function mapInterestsToCategories(
@@ -259,20 +276,25 @@ export async function planTrip(
         continue;
       }
       let scheduled = false;
-      // Cluster days geographically: once a day has a place, prefer
-      // candidates in the same area before falling back to the rest, so a
-      // single day never ping-pongs between Osaka and Kyoto unnecessarily.
-      const scanOrder =
-        previous === undefined
-          ? queue.map((_, index) => index)
-          : [
-              ...queue.flatMap((p, index) =>
-                p.area === previous?.area ? [index] : [],
-              ),
-              ...queue.flatMap((p, index) =>
-                p.area !== previous?.area ? [index] : [],
-              ),
-            ];
+      // Scan order, highest priority first:
+      //  0. unscheduled must-visits — they must never be starved by area
+      //     preference (with a large catalog the same-area pool never drains,
+      //     which would strand a must-visit in the other city);
+      //  1. same area as the previous stop — clusters the rest of the day
+      //     around whatever anchored it, avoiding Osaka-Kyoto ping-pong;
+      //  2. everything else.
+      const scanOrder = queue
+        .map((place, index) => {
+          if (mustVisitIds.has(place.id)) {
+            return { index, priority: 0 };
+          }
+          if (previous !== undefined && place.area === previous.area) {
+            return { index, priority: 1 };
+          }
+          return { index, priority: 2 };
+        })
+        .sort((a, b) => a.priority - b.priority || a.index - b.index)
+        .map((entry) => entry.index);
       for (const i of scanOrder) {
         const candidate = queue[i];
         const window = candidate.openingHours[dayOfWeek];
