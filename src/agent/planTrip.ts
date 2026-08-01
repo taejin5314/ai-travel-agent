@@ -127,16 +127,26 @@ export function mapInterestsToCategories(
 
 /**
  * The hop the planner would actually take: walk when it is short enough,
- * otherwise transit. A zero-minute result is reported as `undefined` so the
- * itinerary never carries a leg the traveller does not make.
+ * otherwise transit. Returns `undefined` when there is no hop to make, so the
+ * itinerary never carries a leg the traveller does not travel.
  */
 async function travelBetween(
   routes: RoutesPort,
   from: Place,
   to: Place,
 ): Promise<TravelLeg | undefined> {
+  // Staying put is not a hop. A revisited restaurant can follow itself when
+  // the pool runs dry on a long trip, and both providers floor at 1 minute
+  // (mock via Math.max, Google via an explicit same-id shortcut) — without
+  // this guard that would surface as a fictitious 1-minute walk.
+  if (from.id === to.id) {
+    return undefined;
+  }
   const walk = await routes.travelMinutes(from, to, "walk");
   if (walk <= MAX_WALK_MINUTES) {
+    // Providers are external and untrusted (AGENTS.md §7): the port documents
+    // a positive integer, but a zero would silently violate TravelLegSchema,
+    // so drop it here rather than emit an invalid leg.
     return walk > 0 ? { minutes: walk, mode: "walk" } : undefined;
   }
   const transit = await routes.travelMinutes(from, to, "transit");
