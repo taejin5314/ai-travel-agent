@@ -59,8 +59,27 @@ const noHoursPlace = {
   types: ["park"],
 };
 
+// Google's 24/7 encoding: one period, Sunday 00:00, no close.
+const alwaysOpenPlace = {
+  id: "gp-fushimi-inari",
+  displayName: { text: "후시미 이나리 신사" },
+  location: { latitude: 34.9671, longitude: 135.7727 },
+  rating: 4.6,
+  userRatingCount: 110000,
+  types: ["shinto_shrine", "tourist_attraction"],
+  regularOpeningHours: {
+    periods: [{ open: { day: 0, hour: 0, minute: 0 } }],
+  },
+};
+
 const searchResponse = {
-  places: [osakaAttraction, kyotoRestaurant, tokyoPlace, noHoursPlace],
+  places: [
+    osakaAttraction,
+    kyotoRestaurant,
+    tokyoPlace,
+    noHoursPlace,
+    alwaysOpenPlace,
+  ],
 };
 
 describe("GooglePlacesProvider", () => {
@@ -75,6 +94,7 @@ describe("GooglePlacesProvider", () => {
       "gp-osaka-castle",
       "gp-katsukura",
       "gp-kamo-river",
+      "gp-fushimi-inari",
     ]);
 
     const castle = places[0];
@@ -100,6 +120,44 @@ describe("GooglePlacesProvider", () => {
     expect(river.openingHours[3]).toEqual({ open: "00:00", close: "23:59" });
   });
 
+  it("treats Google's single open-ended period as open 24/7, not Sunday-only", () => {
+    // Regression: real data stranded Fushimi Inari (open 24 hours) because a
+    // lone Sunday-00:00 period with no close read as "closed Mon-Sat".
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({ places: [alwaysOpenPlace] }),
+    });
+    return provider.findPlacesByName("후시미").then((places) => {
+      expect(places).toHaveLength(1);
+      for (const window of places[0].openingHours) {
+        expect(window).toEqual({ open: "00:00", close: "23:59" });
+      }
+    });
+  });
+
+  it("does not read a lone non-Sunday open-ended period as 24/7", async () => {
+    // Only Google's documented 24/7 shape (Sunday 00:00, no close) means
+    // "always open". A single open-ended Wednesday period is a data anomaly
+    // and must stay a Wednesday-only window.
+    const anomaly = {
+      ...alwaysOpenPlace,
+      id: "gp-anomaly",
+      regularOpeningHours: {
+        periods: [{ open: { day: 3, hour: 9, minute: 0 } }],
+      },
+    };
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({ places: [anomaly] }),
+    });
+    const places = await provider.findPlacesByName("anomaly");
+    expect(places[0].openingHours[2]).toEqual({
+      open: "09:00",
+      close: "23:59",
+    });
+    expect(places[0].openingHours.filter((w) => w !== null)).toHaveLength(1);
+  });
+
   it("sends the API key and field mask headers, never in the URL", async () => {
     const calls: FetchCall[] = [];
     const provider = new GooglePlacesProvider({
@@ -121,7 +179,7 @@ describe("GooglePlacesProvider", () => {
 
     await provider.listPlaces("osaka");
     const callsAfterFirst = fetchFn.mock.calls.length;
-    expect(callsAfterFirst).toBe(3); // attractions + restaurants + hotels
+    expect(callsAfterFirst).toBe(5); // attractions + 3 food queries + hotels
 
     await provider.listPlaces("osaka");
     expect(fetchFn.mock.calls.length).toBe(callsAfterFirst);

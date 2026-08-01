@@ -5,6 +5,7 @@ import {
   mapInterestsToCategories,
   planTrip,
   PACE_MAX_ACTIVITIES_PER_DAY,
+  ratingScore,
 } from "@/agent/planTrip";
 import { MockPlacesProvider } from "@/providers/mock/places";
 import { MockRoutesProvider } from "@/providers/mock/routes";
@@ -228,6 +229,43 @@ describe("planTrip area clustering", () => {
       }
     }
   });
+
+  it("groups must-visits by area instead of following input order", async () => {
+    // Regression: must-visits outrank area preference so they are never
+    // starved, but ranking them purely by input order made an alternating
+    // list (Osaka, Kyoto, Osaka) ping-pong across cities inside one day.
+    const lodging: Place = {
+      id: "hotel-namba",
+      name: "Hotel Namba",
+      area: "osaka",
+      category: "lodging",
+      location: { lat: 34.6664, lng: 135.5013 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 1,
+    };
+    const result = await planTrip(
+      {
+        ...preferences,
+        startDate: "2026-10-05",
+        endDate: "2026-10-05",
+        mustVisit: ["Osaka Castle", "Fushimi Inari Taisha", "Kuromon Market"],
+        interests: [],
+      },
+      {
+        places: new MockPlacesProvider([...fixture, lodging]),
+        routes: new MockRoutesProvider(),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids).toEqual([
+        "osaka-castle",
+        "kuromon-market",
+        "fushimi-inari",
+      ]);
+    }
+  });
 });
 
 describe("planTrip meals, ratings, and lodging anchor", () => {
@@ -327,12 +365,14 @@ describe("planTrip meals, ratings, and lodging anchor", () => {
   });
 
   it("prefers higher-rated attractions when no interests are set", async () => {
+    // Equal review counts, so the rating itself decides.
     const lowSight: Place = {
       ...fixture[0],
       id: "low-sight",
       name: "Low Sight",
       aliases: [],
       rating: 3.0,
+      reviewCount: 5000,
     };
     const highSight: Place = {
       ...fixture[0],
@@ -340,6 +380,7 @@ describe("planTrip meals, ratings, and lodging anchor", () => {
       name: "High Sight",
       aliases: [],
       rating: 4.9,
+      reviewCount: 5000,
     };
     const result = await planTrip(
       { ...preferences, mustVisit: [], interests: [] },
@@ -348,6 +389,34 @@ describe("planTrip meals, ratings, and lodging anchor", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.itinerary.days[0].activities[0].placeId).toBe("high-sight");
+    }
+  });
+
+  it("prefers a well-reviewed restaurant over a thinly-reviewed higher rating", async () => {
+    const thin: Place = {
+      ...osakaRamen,
+      id: "thin-4-9",
+      name: "Thin 4.9",
+      rating: 4.9,
+      reviewCount: 25,
+    };
+    const solid: Place = {
+      ...osakaSushi,
+      id: "solid-4-5",
+      name: "Solid 4.5",
+      rating: 4.5,
+      reviewCount: 40000,
+    };
+    const result = await planTrip(
+      { ...preferences, pace: "relaxed" },
+      makeMealPorts([...fixture, thin, solid, hotelNamba]),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const mealIds = result.itinerary.days[0].activities
+        .filter((a) => ["thin-4-9", "solid-4-5"].includes(a.placeId))
+        .map((a) => a.placeId);
+      expect(mealIds[0]).toBe("solid-4-5");
     }
   });
 
@@ -372,6 +441,34 @@ describe("planTrip meals, ratings, and lodging anchor", () => {
       makeMealPorts(),
     );
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("ratingScore", () => {
+  const base: Place = {
+    id: "x",
+    name: "X",
+    area: "osaka",
+    category: "restaurant",
+    location: { lat: 34.6, lng: 135.5 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 60,
+  };
+
+  it("ranks a well-reviewed 4.5 above a thinly-reviewed 4.9", () => {
+    const thin = { ...base, id: "thin", rating: 4.9, reviewCount: 30 };
+    const solid = { ...base, id: "solid", rating: 4.5, reviewCount: 60000 };
+    expect(ratingScore(solid)).toBeGreaterThan(ratingScore(thin));
+  });
+
+  it("still prefers the higher rating when review counts are comparable", () => {
+    const good = { ...base, id: "good", rating: 4.6, reviewCount: 5000 };
+    const worse = { ...base, id: "worse", rating: 4.1, reviewCount: 5000 };
+    expect(ratingScore(good)).toBeGreaterThan(ratingScore(worse));
+  });
+
+  it("scores unrated places lowest", () => {
+    expect(ratingScore(base)).toBe(0);
   });
 });
 
