@@ -11,7 +11,7 @@ import type { RoutesPort } from "@/providers/ports";
 import { MockPlacesProvider } from "@/providers/mock/places";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { LLM_MODEL_ID, StubLlmProvider } from "@/providers/llm/stub";
-import { validateItinerary } from "@/validators/itinerary";
+import { timeToMinutes, validateItinerary } from "@/validators/itinerary";
 
 const daily = { open: "09:00", close: "18:00" };
 
@@ -615,6 +615,116 @@ describe("planTrip travel legs", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.itinerary.days[0].activities[0].travel).toBeUndefined();
+    }
+  });
+});
+
+describe("planTrip meal placement", () => {
+  const eats = { open: "11:00", close: "22:00" };
+  const hotel: Place = {
+    id: "hotel-namba",
+    name: "Hotel Namba",
+    area: "osaka",
+    category: "lodging",
+    location: { lat: 34.6664, lng: 135.5013 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 1,
+  };
+  function restaurant(
+    id: string,
+    location: Place["location"],
+    area: Place["area"],
+    rating: number,
+  ): Place {
+    return {
+      id,
+      name: id,
+      area,
+      category: "restaurant",
+      location,
+      openingHours: [eats, eats, eats, eats, eats, eats, eats],
+      typicalVisitMinutes: 45,
+      rating,
+      reviewCount: 5000,
+    };
+  }
+  const oneDay: TripPreferences = {
+    ...preferences,
+    endDate: preferences.startDate,
+    mustVisit: [],
+    interests: [],
+  };
+
+  it("prefers a nearby repeat over an unvisited restaurant across the country", async () => {
+    // Regression: the pool ranked "unused" above "nearby", so once the local
+    // restaurants were used the planner sent an Osaka trip to Kyoto — a
+    // 159-minute transit — for lunch.
+    const local = restaurant("local", { lat: 34.667, lng: 135.502 }, "osaka", 4.5);
+    const faraway = restaurant("faraway", { lat: 34.9671, lng: 135.7727 }, "kyoto", 4.9);
+    const result = await planTrip(oneDay, {
+      places: new MockPlacesProvider([hotel, local, faraway]),
+      routes: new MockRoutesProvider(),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids).not.toContain("faraway");
+      expect(ids).toContain("local");
+    }
+  });
+
+  it("never sends the traveller past the meal travel ceiling", async () => {
+    const faraway = restaurant("faraway", { lat: 34.9671, lng: 135.7727 }, "kyoto", 4.9);
+    const result = await planTrip(oneDay, {
+      places: new MockPlacesProvider([hotel, faraway]),
+      routes: new MockRoutesProvider(),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // Nothing is reachable, so the day gets no meal rather than an expedition.
+      expect(result.itinerary.days[0].activities).toEqual([]);
+    }
+  });
+
+  it("spreads a day's meals across different restaurants when it can", async () => {
+    const first = restaurant("first", { lat: 34.667, lng: 135.502 }, "osaka", 4.6);
+    const second = restaurant("second", { lat: 34.6675, lng: 135.5025 }, "osaka", 4.4);
+    const result = await planTrip(oneDay, {
+      places: new MockPlacesProvider([hotel, first, second]),
+      routes: new MockRoutesProvider(),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  it("skips lunch rather than serving it in the dinner window", async () => {
+    // A day built around one very long attraction: lunch cannot happen inside
+    // its window, and taking it late used to displace dinner entirely.
+    const allDaySight: Place = {
+      id: "theme-park",
+      name: "Theme Park",
+      area: "osaka",
+      category: "entertainment",
+      location: { lat: 34.6654, lng: 135.5 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 8 * 60,
+    };
+    const diner = restaurant("diner", { lat: 34.6668, lng: 135.5016 }, "osaka", 4.5);
+    const result = await planTrip(oneDay, {
+      places: new MockPlacesProvider([hotel, allDaySight, diner]),
+      routes: new MockRoutesProvider(),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const meals = result.itinerary.days[0].activities.filter(
+        (a) => a.placeId === "diner",
+      );
+      expect(meals).toHaveLength(1);
+      // The single meal sits in the dinner window, not before it.
+      expect(timeToMinutes(meals[0].start)).toBeGreaterThanOrEqual(17 * 60 + 30);
     }
   });
 });

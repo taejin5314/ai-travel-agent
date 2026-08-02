@@ -23,6 +23,11 @@ export type PlanTripResult =
 const DAY_START_MINUTES = 9 * 60 + 30;
 const DAY_END_MINUTES = 18 * 60 + 30;
 const MAX_WALK_MINUTES = 20;
+// How far a traveller will reasonably go for a meal. Generous enough to reach
+// across a metro area (the bay-side aquarium to central Osaka is ~30 minutes)
+// but far short of an Osaka-to-Kyoto run; past it the planner prefers no meal
+// at all over the expedition.
+const MAX_MEAL_TRAVEL_MINUTES = 45;
 const LUNCH_START_MINUTES = 12 * 60;
 const DINNER_START_MINUTES = 17 * 60 + 30;
 const MEAL_HARD_END_MINUTES = 20 * 60;
@@ -233,20 +238,30 @@ export async function planTrip(
   const queue: Place[] = [...mustVisitPlaces, ...interestPlaces, ...otherPlaces];
   const maxPerDay = PACE_MAX_ACTIVITIES_PER_DAY[preferences.pace];
 
-  // Top-rated open restaurant, preferring the current area and unvisited
-  // options; falls back to revisiting one on long trips.
+  // Top-rated open restaurant for one meal slot. Nearby beats novel: a
+  // restaurant already visited in the current area outranks an unvisited one
+  // in the other city, because a repeat of somewhere good beats a two-hour
+  // train ride for lunch.
   async function scheduleMeal(
     dayOfWeek: number,
     clock: number,
     previous: Place | undefined,
-    earliest: number,
+    slot: MealSlot,
+    eatenToday: ReadonlySet<string>,
   ): Promise<{ activity: Activity; place: Place; end: number } | null> {
-    const unused = restaurants.filter((r) => !usedRestaurantIds.has(r.id));
-    const pool = [
-      ...unused.filter((r) => previous !== undefined && r.area === previous.area),
-      ...unused.filter((r) => previous === undefined || r.area !== previous.area),
-      ...restaurants.filter((r) => usedRestaurantIds.has(r.id)),
-    ];
+    const [earliest, latestEnd] = MEAL_WINDOWS[slot];
+    // Preference order, worst penalty first: never eat at the same place
+    // twice in one day, then stay in the current area, then prefer somewhere
+    // new. Each is a fallback, not a filter — a sparse catalog still gets fed.
+    // `restaurants` is pre-sorted by rating, which breaks every tie.
+    const rank = (r: Place): number =>
+      (eatenToday.has(r.id) ? 4 : 0) +
+      (previous !== undefined && r.area === previous.area ? 0 : 2) +
+      (usedRestaurantIds.has(r.id) ? 1 : 0);
+    const pool = restaurants
+      .map((restaurant, index) => ({ restaurant, index }))
+      .sort((a, b) => rank(a.restaurant) - rank(b.restaurant) || a.index - b.index)
+      .map((entry) => entry.restaurant);
     for (const candidate of pool) {
       const window = candidate.openingHours[dayOfWeek];
       if (window === null) {
@@ -256,13 +271,21 @@ export async function planTrip(
         previous === undefined
           ? undefined
           : await travelBetween(ports.routes, previous, candidate);
+      // A meal is not worth an expedition. Without this ceiling the planner
+      // sent an Osaka trip to Kyoto for lunch once the local pool was used.
+      if (legMinutes(travel) > MAX_MEAL_TRAVEL_MINUTES) {
+        continue;
+      }
       const start = Math.max(
         clock + legMinutes(travel),
         earliest,
         timeToMinutes(window.open),
       );
       const end = start + candidate.typicalVisitMinutes;
-      if (end > Math.min(timeToMinutes(window.close), MEAL_HARD_END_MINUTES)) {
+      // The slot's own window, not the end of the evening: a lunch that can
+      // only start at 18:30 is not lunch, and taking it would leave no room
+      // for dinner.
+      if (end > Math.min(timeToMinutes(window.close), latestEnd)) {
         continue;
       }
       usedRestaurantIds.add(candidate.id);
@@ -288,20 +311,17 @@ export async function planTrip(
     let previous: Place | undefined = lodgingPlace;
     let attractionCount = 0;
     let lunchAttempted = false;
+    const eatenToday = new Set<string>();
 
     while (attractionCount < maxPerDay) {
       // Meal slot: once the morning reaches lunch time, eat before the next
       // stop. Meals do not count toward the pace cap.
       if (!lunchAttempted && clock >= LUNCH_START_MINUTES) {
         lunchAttempted = true;
-        const lunch = await scheduleMeal(
-          dayOfWeek,
-          clock,
-          previous,
-          LUNCH_START_MINUTES,
-        );
+        const lunch = await scheduleMeal(dayOfWeek, clock, previous, "lunch", eatenToday);
         if (lunch !== null) {
           activities.push(lunch.activity);
+          eatenToday.add(lunch.place.id);
           previous = lunch.place;
           clock = lunch.end;
         }
@@ -367,26 +387,18 @@ export async function planTrip(
 
     // Short morning (queue exhausted before noon) still deserves lunch.
     if (!lunchAttempted) {
-      const lunch = await scheduleMeal(
-        dayOfWeek,
-        clock,
-        previous,
-        LUNCH_START_MINUTES,
-      );
+      const lunch = await scheduleMeal(dayOfWeek, clock, previous, "lunch", eatenToday);
       if (lunch !== null) {
         activities.push(lunch.activity);
+        eatenToday.add(lunch.place.id);
         previous = lunch.place;
         clock = lunch.end;
       }
     }
-    const dinner = await scheduleMeal(
-      dayOfWeek,
-      clock,
-      previous,
-      DINNER_START_MINUTES,
-    );
+    const dinner = await scheduleMeal(dayOfWeek, clock, previous, "dinner", eatenToday);
     if (dinner !== null) {
       activities.push(dinner.activity);
+      eatenToday.add(dinner.place.id);
       previous = dinner.place;
       clock = dinner.end;
     }

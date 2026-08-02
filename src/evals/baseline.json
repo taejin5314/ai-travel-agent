@@ -8,7 +8,7 @@
       "validatorPassed": true,
       "validatorErrors": [],
       "days": 2,
-      "activities": 8,
+      "activities": 7,
       "crossAreaHops": 0,
       "idleMinutes": 80,
       "mealSlotsFilled": 3,
@@ -49,8 +49,8 @@
       "validatorErrors": [],
       "days": 3,
       "activities": 12,
-      "crossAreaHops": 1,
-      "idleMinutes": 525,
+      "crossAreaHops": 0,
+      "idleMinutes": 633,
       "mealSlotsFilled": 6,
       "mealSlotsExpected": 6
     }
