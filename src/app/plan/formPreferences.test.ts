@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildItineraryView,
+  CONSTRAINT_OPTIONS,
   buildTripPreferencesCandidate,
   extractFormValues,
   translateSchemaErrors,
@@ -9,10 +10,18 @@ import {
 import type { Place } from "@/domain/schema/place";
 import { TripPreferencesSchema } from "@/domain/schema/tripPreferences";
 
-function buildFormData(fields: Record<string, string>): FormData {
+// Constraints are checkboxes: several values under one name, so an array
+// field is appended rather than set.
+function buildFormData(fields: Record<string, string | string[]>): FormData {
   const formData = new FormData();
   for (const [key, value] of Object.entries(fields)) {
-    formData.set(key, value);
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        formData.append(key, entry);
+      }
+    } else {
+      formData.set(key, value);
+    }
   }
   return formData;
 }
@@ -26,7 +35,7 @@ const validFields = {
   mustVisit: "Osaka Castle, Dotonbori",
   interests: "food\nshopping",
   pace: "balanced",
-  constraints: "",
+  constraints: [] as string[],
 };
 
 describe("buildTripPreferencesCandidate", () => {
@@ -56,23 +65,47 @@ describe("buildTripPreferencesCandidate", () => {
     ]);
   });
 
-  it("omits constraints when the field is blank", () => {
+  it("omits constraints when no box is checked", () => {
     const candidate = buildTripPreferencesCandidate(
-      buildFormData({ ...validFields, constraints: "  " }),
+      buildFormData({ ...validFields, constraints: [] }),
     );
 
     expect((candidate as { constraints?: string[] }).constraints).toBeUndefined();
   });
 
-  it("parses constraints when provided", () => {
+  it("collects every checked constraint", () => {
     const candidate = buildTripPreferencesCandidate(
-      buildFormData({ ...validFields, constraints: "no early mornings, budget-friendly" }),
+      buildFormData({
+        ...validFields,
+        constraints: ["late-start", "less-walking"],
+      }),
     );
 
     expect((candidate as { constraints?: string[] }).constraints).toEqual([
-      "no early mornings",
-      "budget-friendly",
+      "late-start",
+      "less-walking",
     ]);
+  });
+
+  it("rejects a constraint the planner does not implement", () => {
+    // The form only ever submits known values; a hand-crafted POST must not
+    // sneak a constraint past the schema and be silently ignored downstream.
+    const candidate = buildTripPreferencesCandidate(
+      buildFormData({ ...validFields, constraints: ["budget-friendly"] }),
+    );
+
+    expect(TripPreferencesSchema.safeParse(candidate).success).toBe(false);
+  });
+
+  it("accepts every constraint the form offers", () => {
+    const candidate = buildTripPreferencesCandidate(
+      buildFormData({
+        ...validFields,
+        constraints: CONSTRAINT_OPTIONS.map((option) => option.value),
+      }),
+    );
+
+    expect(TripPreferencesSchema.safeParse(candidate).success).toBe(true);
   });
 
   it("produces a candidate that passes TripPreferencesSchema when input is valid", () => {
@@ -85,7 +118,11 @@ describe("buildTripPreferencesCandidate", () => {
 describe("extractFormValues", () => {
   it("returns the raw submitted strings, unsplit, for restoring the form after an error", () => {
     const values = extractFormValues(
-      buildFormData({ ...validFields, mustVisit: " Osaka Castle ,\nDotonbori,, " }),
+      buildFormData({
+        ...validFields,
+        mustVisit: " Osaka Castle ,\nDotonbori,, ",
+        constraints: ["late-start"],
+      }),
     );
 
     expect(values).toEqual({
@@ -97,7 +134,7 @@ describe("extractFormValues", () => {
       mustVisit: "Osaka Castle ,\nDotonbori,,",
       interests: "food\nshopping",
       pace: "balanced",
-      constraints: "",
+      constraints: ["late-start"],
     });
   });
 });

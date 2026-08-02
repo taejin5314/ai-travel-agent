@@ -3,10 +3,16 @@ import { submitTripPreferences } from "@/app/plan/actions";
 import { buildItineraryView, initialPlanFormState } from "@/app/plan/formPreferences";
 import { itineraryStore } from "@/db/store";
 
-function buildFormData(fields: Record<string, string>): FormData {
+function buildFormData(fields: Record<string, string | string[]>): FormData {
   const formData = new FormData();
   for (const [key, value] of Object.entries(fields)) {
-    formData.set(key, value);
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        formData.append(key, entry);
+      }
+    } else {
+      formData.set(key, value);
+    }
   }
   return formData;
 }
@@ -20,7 +26,7 @@ const validFields = {
   mustVisit: "Osaka Castle, Dotonbori",
   interests: "food",
   pace: "balanced",
-  constraints: "",
+  constraints: [] as string[],
 };
 
 describe("submitTripPreferences", () => {
@@ -104,7 +110,7 @@ describe("submitTripPreferences", () => {
         mustVisit: "Osaka Castle, Dotonbori",
         interests: "food",
         pace: "balanced",
-        constraints: "",
+        constraints: [] as string[],
       },
     });
   });
@@ -143,7 +149,7 @@ describe("submitTripPreferences", () => {
         mustVisit: "Osaka Castle, Dotonbori",
         interests: "food",
         pace: "balanced",
-        constraints: "",
+        constraints: [] as string[],
       });
     }
   });

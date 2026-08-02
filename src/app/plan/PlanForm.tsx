@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { submitTripPreferences } from "./actions";
-import { initialPlanFormState } from "./formPreferences";
+import { CONSTRAINT_OPTIONS, initialPlanFormState } from "./formPreferences";
 import { PlanSummary } from "./PlanSummary";
 
 const PACE_OPTIONS = [
@@ -143,16 +143,29 @@ export function PlanForm() {
         </div>
       </fieldset>
 
-      <label className="flex flex-col gap-1.5">
-        <span className={labelClassName}>제약 조건 (선택)</span>
-        <textarea
-          name="constraints"
-          rows={2}
-          placeholder="쉼표 또는 줄바꿈으로 구분 (예: 이른 아침 일정 제외)"
-          defaultValue={values?.constraints}
-          className={inputClassName}
-        />
-      </label>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className={labelClassName}>제약 조건 (선택)</legend>
+        <div className="flex flex-col gap-2">
+          {CONSTRAINT_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex items-start gap-2.5 text-sm"
+            >
+              <input
+                type="checkbox"
+                name="constraints"
+                value={option.value}
+                defaultChecked={values?.constraints.includes(option.value)}
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span className="flex flex-col">
+                <span>{option.label}</span>
+                <span className="text-xs text-zinc-500">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       {state.status === "error" && (
         <ul className="flex flex-col gap-1 rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">

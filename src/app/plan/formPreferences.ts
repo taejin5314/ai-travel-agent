@@ -1,4 +1,5 @@
 import type { ZodError } from "zod";
+import type { TripConstraint } from "@/domain/schema/constraint";
 import type { Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
@@ -20,8 +21,44 @@ export type PlanFormValues = {
   mustVisit: string;
   interests: string;
   pace: string;
-  constraints: string;
+  /** Checked constraint values, kept raw so the form can restore them. */
+  constraints: string[];
 };
+
+/**
+ * The constraint checkboxes the form offers, in display order. Every option
+ * here is honoured by the planner — nothing is shown that only decorates the
+ * summary.
+ */
+export const CONSTRAINT_OPTIONS: readonly {
+  value: TripConstraint;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "late-start",
+    label: "늦게 시작",
+    hint: "오전 11시부터 일정을 시작합니다",
+  },
+  {
+    value: "early-end",
+    label: "일찍 마무리",
+    hint: "관광 일정을 오후 4시 30분에 마칩니다 (식사는 그대로)",
+  },
+  {
+    value: "less-walking",
+    label: "걷기 최소화",
+    hint: "걸어갈 만한 거리도 대중교통을 이용합니다",
+  },
+];
+
+const CONSTRAINT_LABELS = new Map(
+  CONSTRAINT_OPTIONS.map((option) => [option.value, option.label]),
+);
+
+export function constraintLabel(constraint: TripConstraint): string {
+  return CONSTRAINT_LABELS.get(constraint) ?? constraint;
+}
 
 /** Presentation-only view of a generated itinerary (place ids resolved to names). */
 export type ItineraryViewDay = {
@@ -107,9 +144,19 @@ function getString(formData: FormData, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function getStrings(formData: FormData, key: string): string[] {
+  return formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 /** Maps raw FormData to an untrusted candidate object for TripPreferencesSchema.safeParse. */
 export function buildTripPreferencesCandidate(formData: FormData): unknown {
-  const constraints = splitEntries(getString(formData, "constraints"));
+  // Checkboxes: several values under one name. Left as raw strings — the Zod
+  // enum is what decides whether each is a constraint we honour.
+  const constraints = getStrings(formData, "constraints");
 
   return {
     startDate: getString(formData, "startDate"),
@@ -137,7 +184,7 @@ export function extractFormValues(formData: FormData): PlanFormValues {
     mustVisit: getString(formData, "mustVisit"),
     interests: getString(formData, "interests"),
     pace: getString(formData, "pace"),
-    constraints: getString(formData, "constraints"),
+    constraints: getStrings(formData, "constraints"),
   };
 }
 

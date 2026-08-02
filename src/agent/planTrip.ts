@@ -1,4 +1,5 @@
 import { matchesExactly } from "@/domain/placeMatch";
+import type { TripConstraint } from "@/domain/schema/constraint";
 import type { Activity, DayPlan, Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
@@ -23,6 +24,9 @@ export type PlanTripResult =
 const DAY_START_MINUTES = 9 * 60 + 30;
 const DAY_END_MINUTES = 18 * 60 + 30;
 const MAX_WALK_MINUTES = 20;
+const LATE_START_MINUTES = 11 * 60;
+const EARLY_END_MINUTES = 16 * 60 + 30;
+const LESS_WALKING_MAX_MINUTES = 8;
 // How far a traveller will reasonably go for a meal. Generous enough to reach
 // across a metro area (the bay-side aquarium to central Osaka is ~30 minutes)
 // but far short of an Osaka-to-Kyoto run; past it the planner prefers no meal
@@ -44,6 +48,32 @@ export const MEAL_WINDOWS = {
 } as const;
 
 export type MealSlot = keyof typeof MEAL_WINDOWS;
+
+/**
+ * The scheduling bounds a set of constraints produces. Constraints only ever
+ * tighten the default day — none of them can lengthen it — so an unknown or
+ * empty list is a no-op rather than an error.
+ */
+export type ScheduleBounds = {
+  dayStart: number;
+  dayEnd: number;
+  maxWalkMinutes: number;
+};
+
+export function scheduleBoundsFor(
+  constraints: readonly TripConstraint[] = [],
+): ScheduleBounds {
+  const has = (constraint: TripConstraint) => constraints.includes(constraint);
+  return {
+    dayStart: has("late-start") ? LATE_START_MINUTES : DAY_START_MINUTES,
+    // Sightseeing only. Someone who wants to stop early still eats dinner,
+    // so the meal windows are deliberately left alone.
+    dayEnd: has("early-end") ? EARLY_END_MINUTES : DAY_END_MINUTES,
+    maxWalkMinutes: has("less-walking")
+      ? LESS_WALKING_MAX_MINUTES
+      : MAX_WALK_MINUTES,
+  };
+}
 
 export const PACE_MAX_ACTIVITIES_PER_DAY: Record<
   TripPreferences["pace"],
@@ -145,6 +175,7 @@ async function travelBetween(
   routes: RoutesPort,
   from: Place,
   to: Place,
+  maxWalkMinutes: number,
 ): Promise<TravelLeg | undefined> {
   // Staying put is not a hop. A revisited restaurant can follow itself when
   // the pool runs dry on a long trip, and both providers floor at 1 minute
@@ -154,7 +185,7 @@ async function travelBetween(
     return undefined;
   }
   const walk = await routes.travelMinutes(from, to, "walk");
-  if (walk <= MAX_WALK_MINUTES) {
+  if (walk <= maxWalkMinutes) {
     // Providers are external and untrusted (AGENTS.md §7): the port documents
     // a positive integer, but a zero would silently violate TravelLegSchema,
     // so drop it here rather than emit an invalid leg.
@@ -237,6 +268,7 @@ export async function planTrip(
 
   const queue: Place[] = [...mustVisitPlaces, ...interestPlaces, ...otherPlaces];
   const maxPerDay = PACE_MAX_ACTIVITIES_PER_DAY[preferences.pace];
+  const bounds = scheduleBoundsFor(preferences.constraints);
 
   // Top-rated open restaurant for one meal slot. Nearby beats novel: a
   // restaurant already visited in the current area outranks an unvisited one
@@ -270,7 +302,7 @@ export async function planTrip(
       const travel =
         previous === undefined
           ? undefined
-          : await travelBetween(ports.routes, previous, candidate);
+          : await travelBetween(ports.routes, previous, candidate, bounds.maxWalkMinutes);
       // A meal is not worth an expedition. Without this ceiling the planner
       // sent an Osaka trip to Kyoto for lunch once the local pool was used.
       if (legMinutes(travel) > MAX_MEAL_TRAVEL_MINUTES) {
@@ -307,7 +339,7 @@ export async function planTrip(
   for (const date of enumerateDates(preferences.startDate, preferences.endDate)) {
     const dayOfWeek = weekdayIndex(date);
     const activities: Activity[] = [];
-    let clock = DAY_START_MINUTES;
+    let clock = bounds.dayStart;
     let previous: Place | undefined = lodgingPlace;
     let attractionCount = 0;
     let lunchAttempted = false;
@@ -358,13 +390,13 @@ export async function planTrip(
         const travel =
           previous === undefined
             ? undefined
-            : await travelBetween(ports.routes, previous, candidate);
+            : await travelBetween(ports.routes, previous, candidate, bounds.maxWalkMinutes);
         const start = Math.max(
           clock + legMinutes(travel),
           timeToMinutes(window.open),
         );
         const end = start + candidate.typicalVisitMinutes;
-        if (end > Math.min(timeToMinutes(window.close), DAY_END_MINUTES)) {
+        if (end > Math.min(timeToMinutes(window.close), bounds.dayEnd)) {
           continue;
         }
         activities.push({

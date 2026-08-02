@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TripConstraintSchema } from "@/domain/schema/constraint";
 
 const isoDateSchema = z
   .string()
@@ -18,7 +19,8 @@ export const TripPreferencesSchema = z.object({
   mustVisit: z.array(z.string().min(1)),
   interests: z.array(z.string()),
   pace: z.enum(["relaxed", "balanced", "packed"]),
-  constraints: z.array(z.string()).optional(),
+  // A closed set: every member changes the schedule. See constraint.ts.
+  constraints: z.array(TripConstraintSchema).optional(),
 });
 
 export type TripPreferences = z.infer<typeof TripPreferencesSchema>;
