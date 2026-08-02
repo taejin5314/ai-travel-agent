@@ -6,6 +6,7 @@ import {
   planTrip,
   PACE_MAX_ACTIVITIES_PER_DAY,
   ratingScore,
+  scheduleBoundsFor,
 } from "@/agent/planTrip";
 import type { RoutesPort } from "@/providers/ports";
 import { MockPlacesProvider } from "@/providers/mock/places";
@@ -726,6 +727,128 @@ describe("planTrip meal placement", () => {
       // The single meal sits in the dinner window, not before it.
       expect(timeToMinutes(meals[0].start)).toBeGreaterThanOrEqual(17 * 60 + 30);
     }
+  });
+});
+
+describe("planTrip constraints", () => {
+  // Two places ~1.2 km apart: a walk by default, transit under less-walking.
+  const hotel: Place = {
+    id: "hotel-namba",
+    name: "Hotel Namba",
+    area: "osaka",
+    category: "lodging",
+    location: { lat: 34.6664, lng: 135.5013 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 1,
+  };
+  const wideOpen = { open: "00:00", close: "23:59" };
+  const first: Place = {
+    id: "first-stop",
+    name: "First Stop",
+    area: "osaka",
+    category: "sight",
+    location: { lat: 34.667, lng: 135.502 },
+    openingHours: [
+      wideOpen, wideOpen, wideOpen, wideOpen, wideOpen, wideOpen, wideOpen,
+    ],
+    typicalVisitMinutes: 60,
+  };
+  const second: Place = {
+    ...first,
+    id: "second-stop",
+    name: "Second Stop",
+    location: { lat: 34.6742, lng: 135.5093 },
+  };
+  const oneDay: TripPreferences = {
+    ...preferences,
+    endDate: preferences.startDate,
+    mustVisit: [],
+    interests: [],
+    pace: "packed",
+  };
+
+  function plan(constraints?: TripPreferences["constraints"]) {
+    return planTrip(
+      { ...oneDay, ...(constraints !== undefined && { constraints }) },
+      {
+        places: new MockPlacesProvider([hotel, first, second]),
+        routes: new MockRoutesProvider(),
+      },
+    );
+  }
+
+  it("starts the day later with late-start", async () => {
+    const [normal, late] = [await plan(), await plan(["late-start"])];
+    expect(normal.ok && late.ok).toBe(true);
+    if (normal.ok && late.ok) {
+      const before = normal.itinerary.days[0].activities[0].start;
+      const after = late.itinerary.days[0].activities[0].start;
+      expect(timeToMinutes(after)).toBeGreaterThanOrEqual(11 * 60);
+      expect(timeToMinutes(after)).toBeGreaterThan(timeToMinutes(before));
+    }
+  });
+
+  it("stops sightseeing earlier with early-end", async () => {
+    const result = await plan(["early-end"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const sights = result.itinerary.days[0].activities.filter((a) =>
+        ["first-stop", "second-stop"].includes(a.placeId),
+      );
+      expect(sights.length).toBeGreaterThan(0);
+      for (const sight of sights) {
+        expect(timeToMinutes(sight.end)).toBeLessThanOrEqual(16 * 60 + 30);
+      }
+    }
+  });
+
+  it("switches a walkable hop to transit with less-walking", async () => {
+    const [normal, easier] = [await plan(), await plan(["less-walking"])];
+    expect(normal.ok && easier.ok).toBe(true);
+    if (normal.ok && easier.ok) {
+      const legOf = (r: typeof normal) =>
+        r.ok
+          ? r.itinerary.days[0].activities.find((a) => a.placeId === "second-stop")
+              ?.travel
+          : undefined;
+      expect(legOf(normal)?.mode).toBe("walk");
+      expect(legOf(easier)?.mode).toBe("transit");
+    }
+  });
+
+  it("treats an empty or absent constraint list as a no-op", async () => {
+    const [absent, empty] = [await plan(), await plan([])];
+    expect(absent).toEqual(empty);
+  });
+
+  it("applies several constraints together", async () => {
+    const result = await plan(["late-start", "less-walking"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const activities = result.itinerary.days[0].activities;
+      expect(timeToMinutes(activities[0].start)).toBeGreaterThanOrEqual(11 * 60);
+      const hop = activities.find((a) => a.placeId === "second-stop")?.travel;
+      expect(hop?.mode).toBe("transit");
+    }
+  });
+});
+
+describe("scheduleBoundsFor", () => {
+  it("returns the default day when nothing is constrained", () => {
+    expect(scheduleBoundsFor()).toEqual({
+      dayStart: 9 * 60 + 30,
+      dayEnd: 18 * 60 + 30,
+      maxWalkMinutes: 20,
+    });
+    expect(scheduleBoundsFor([])).toEqual(scheduleBoundsFor());
+  });
+
+  it("only ever tightens the day", () => {
+    const base = scheduleBoundsFor();
+    const all = scheduleBoundsFor(["late-start", "early-end", "less-walking"]);
+    expect(all.dayStart).toBeGreaterThan(base.dayStart);
+    expect(all.dayEnd).toBeLessThan(base.dayEnd);
+    expect(all.maxWalkMinutes).toBeLessThan(base.maxWalkMinutes);
   });
 });
 

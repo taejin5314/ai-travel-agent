@@ -1,5 +1,5 @@
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
-import type { ItineraryViewDay } from "./formPreferences";
+import { constraintLabel, type ItineraryViewDay } from "./formPreferences";
 
 const PACE_LABELS: Record<TripPreferences["pace"], string> = {
   relaxed: "여유롭게",
@@ -118,7 +118,7 @@ export function PlanSummary({
           <dt className="text-zinc-600 dark:text-zinc-400">제약 조건</dt>
           <dd className="text-right">
             {data.constraints && data.constraints.length > 0
-              ? data.constraints.join(", ")
+              ? data.constraints.map(constraintLabel).join(", ")
               : "-"}
           </dd>
         </div>

@@ -9,7 +9,7 @@ const validInput = {
   mustVisit: ["Osaka Castle"],
   interests: ["food"],
   pace: "balanced",
-  constraints: ["no early mornings"],
+  constraints: ["late-start"],
 };
 
 describe("TripPreferencesSchema", () => {
