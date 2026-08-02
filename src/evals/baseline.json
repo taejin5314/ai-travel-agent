@@ -1,0 +1,78 @@
+[
+  {
+    "scenario": "osaka-two-days",
+    "planned": true,
+    "met": true,
+    "errors": [],
+    "score": {
+      "mustVisitCoverage": 1,
+      "validatorPassed": true,
+      "validatorErrors": [],
+      "days": 2,
+      "activities": 8,
+      "crossAreaHops": 0,
+      "idleMinutes": 80,
+      "mealSlotsFilled": 4,
+      "mealSlotsExpected": 4
+    }
+  },
+  {
+    "scenario": "osaka-kyoto-three-days",
+    "planned": true,
+    "met": true,
+    "errors": [],
+    "score": {
+      "mustVisitCoverage": 1,
+      "validatorPassed": true,
+      "validatorErrors": [],
+      "days": 3,
+      "activities": 15,
+      "crossAreaHops": 1,
+      "idleMinutes": 231,
+      "mealSlotsFilled": 6,
+      "mealSlotsExpected": 6
+    }
+  },
+  {
+    "scenario": "must-visit-closed",
+    "planned": false,
+    "met": true,
+    "errors": [
+      "여행 기간 안에 다음 필수 방문지를 배치하지 못했습니다: Osaka Castle"
+    ]
+  },
+  {
+    "scenario": "pace-relaxed",
+    "planned": true,
+    "met": true,
+    "errors": [],
+    "score": {
+      "mustVisitCoverage": 1,
+      "validatorPassed": true,
+      "validatorErrors": [],
+      "days": 3,
+      "activities": 12,
+      "crossAreaHops": 1,
+      "idleMinutes": 525,
+      "mealSlotsFilled": 6,
+      "mealSlotsExpected": 6
+    }
+  },
+  {
+    "scenario": "pace-packed",
+    "planned": true,
+    "met": true,
+    "errors": [],
+    "score": {
+      "mustVisitCoverage": 1,
+      "validatorPassed": true,
+      "validatorErrors": [],
+      "days": 3,
+      "activities": 14,
+      "crossAreaHops": 0,
+      "idleMinutes": 83,
+      "mealSlotsFilled": 5,
+      "mealSlotsExpected": 6
+    }
+  }
+]
