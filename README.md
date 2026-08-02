@@ -7,8 +7,11 @@ dates, lodging, party size, must-visit places, interests, pace and constraints,
 it produces a validated day-by-day itinerary using real place data, travel
 times, opening-hours checks, and must-visit coverage.
 
-> **Status:** building the safe, automatable development foundation.
-> The AI trip-planning features are not implemented yet.
+> **Status:** live on real Google Places/Routes data, with a **deterministic**
+> planner — no model is involved yet. Enter your preferences at `/plan` and you
+> get a validated day-by-day itinerary with travel times, saved behind a
+> shareable link. Real LLM calls, authentication, payments and a real database
+> are still gated behind explicit issues (see [AGENTS.md](./AGENTS.md) §1).
 
 ## Tech stack
 
@@ -25,6 +28,11 @@ pnpm install
 pnpm dev        # http://localhost:3000
 ```
 
+Set `GOOGLE_MAPS_API_KEY` in `.env.local` (see `.env.example`) to plan against
+real Places/Routes data. **Without it the app still works**, falling back to the
+mock catalog in `fixtures/places.json` — which is also what keeps dev, CI and
+every test offline and deterministic.
+
 ## Commands
 
 | Command | What it does |
@@ -36,6 +44,7 @@ pnpm dev        # http://localhost:3000
 | `pnpm test` | Vitest (CI mode) |
 | `pnpm test:watch` | Vitest watch mode |
 | `pnpm coverage` | Vitest with coverage |
+| `pnpm eval` | Run the eval scenarios against the mock catalog (offline) |
 | `pnpm verify` | typecheck + lint + test + build (run before every PR) |
 
 ## Architecture
@@ -50,8 +59,13 @@ app → agent → providers(ports) → domain
 
 - `src/domain` — pure types + Zod schemas
 - `src/validators` — deterministic time/conflict/opening-hours checks (no LLM)
-- `src/providers` — external adapters behind interfaces (mock now; Google/LLM later)
-- `src/agent` — AI workflow + prompts (later)
+- `src/providers` — external adapters behind interfaces: `mock/` and `google/`
+  are live, `llm/` is a stub that throws until the LLM phase is approved
+- `src/agent` — the deterministic planner (AI workflow + prompts come later)
+- `src/db` — `ItineraryStore` behind an in-memory implementation
+- `src/evals` — scenarios, scorer, and a committed baseline scorecard
+
+Tests live beside the code they cover (`src/**/*.test.ts`).
 
 ## Development workflow
 

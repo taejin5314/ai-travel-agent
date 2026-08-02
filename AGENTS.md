@@ -16,14 +16,22 @@ travel dates, lodging location, party size, must-visit places, interests, pace
 and constraints; the app returns a validated day-by-day itinerary based on real
 place data, travel times, opening hours, and must-visit coverage.
 
-**We are NOT building the AI trip features yet.** The current objective is a
-safe, automatable development foundation. Do not implement authentication,
-payments, Google Places/Routes, or real LLM calls until an issue explicitly
-asks for that phase.
+**Where we are:** the development foundation is in place, and so is a
+**deterministic** planner — `src/agent/planTrip.ts` builds a validated
+day-by-day itinerary from real Google Places/Routes data, scored by the eval
+scenarios in `src/evals/`. No model is involved anywhere yet.
+
+**Still gated — do not implement until an issue explicitly asks:**
+authentication, payments, real LLM calls, and any real (non in-memory)
+database. `src/providers/llm/stub.ts` throws by design.
 
 ---
 
 ## 2. Architecture & layer boundaries
+
+Every path below exists today; anything planned is marked as such with its
+issue. Keep it that way — a tree that lists directories we never built is how
+an agent ends up importing from nowhere.
 
 ```
 src/
@@ -32,16 +40,21 @@ src/
   validators/   Deterministic checks (time, conflicts, opening hours,
                 must-visit coverage). Depends only on domain. NO LLM.
   providers/    External adapters behind interfaces (ports.ts).
-                mock/ (now) · google/ · llm/ (later, stubs only).
-  agent/        AI workflow + prompts. Receives providers via ports (DI).
-                Delegates time/conflict decisions to validators.
-  db/           Data layer. In-memory stub for now.
-  evals/        AI scenarios + evaluation (later).
-  lib/          Shared utils (time zones, logging, config).
-tests/          unit · integration · e2e (later)
-scripts/        run-scenario.ts and dev tools
-fixtures/       mock + future record/replay data (JSON)
+                mock/ · google/ (live) · llm/ (stub that throws).
+  agent/        Planner +, later, AI workflow and prompts. Receives providers
+                via ports (DI). Delegates time/conflict decisions to validators.
+  db/           Data layer behind ItineraryStore. In-memory only; a real
+                database is still gated (§1).
+  evals/        Scenarios, scorer, and committed baseline scorecard.
+  lib/          Shared utils (config; time zones and logging as needed).
+scripts/        run-scenario.ts (offline evals) · smoke-google.ts (manual,
+                live, never in CI)
+fixtures/       mock catalog + future record/replay data (JSON)
 ```
+
+**Tests live next to the code they cover** — `src/**/*.test.ts`, picked up by
+`vitest.config.ts`. There is no top-level `tests/` directory; a future e2e
+suite would be the reason to add one.
 
 **Dependency direction (arrows point inward; inner layers are pure):**
 
@@ -116,8 +129,11 @@ Keep one Issue → one small PR. Do not bundle unrelated changes.
 - New behavior needs a test. Bug fixes need a regression test.
 - Tests must be deterministic: inject clocks/seeds, use fixtures or
   record/replay — never hit real external services in unit/CI tests.
-- `tests/`, `AGENTS.md`, and `.github/` are owned via CODEOWNERS; changes there
-  get extra human scrutiny.
+- Eval scenarios (`src/evals/`) run inside `pnpm test`, so CI scores every
+  change. A baseline diff is not automatically a failure — regenerate with
+  `pnpm eval --update` and put the before/after in the PR for a human to read.
+- `AGENTS.md`, `.github/`, `vitest.config.ts` and a future `tests/` are owned
+  via CODEOWNERS; changes there get extra human scrutiny.
 
 ---
 
@@ -131,10 +147,11 @@ pnpm lint        # eslint
 pnpm test        # vitest run (CI mode)
 pnpm test:watch  # vitest watch
 pnpm coverage    # vitest run --coverage
+pnpm eval        # eval scenarios against the mock catalog (offline)
 pnpm verify      # typecheck + lint + test + build (run before every PR)
 ```
 
-Package manager is **pnpm**. Node is pinned via `.nvmrc` / `engines`.
+Package manager is **pnpm**. Node is pinned via `engines` (>=20.9.0).
 
 ---
 
