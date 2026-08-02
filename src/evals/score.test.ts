@@ -104,6 +104,57 @@ describe("scoreItinerary", () => {
     expect(score.idleMinutes).toBe(50);
   });
 
+  it("credits coverage only to the place the planner would have resolved", () => {
+    // "Castle" loosely matches both; the planner takes the first catalog hit,
+    // so scheduling the other one is a miss, not a pass.
+    const catalog = [
+      ...places,
+      place({ id: "nijo", name: "Nijo Castle", area: "kyoto" }),
+    ];
+    const score = scoreItinerary(
+      itineraryOf([{ placeId: "nijo", start: "09:30", end: "10:30" }]),
+      catalog,
+      { ...preferences, mustVisit: ["Castle"] },
+    );
+    expect(score.mustVisitCoverage).toBe(0);
+  });
+
+  it("counts a meal slot once even when two restaurants land in the same window", () => {
+    // Regression: a raw restaurant count reported this as both slots filled,
+    // which hid a day whose lunch was pushed into the dinner window.
+    const score = scoreItinerary(
+      itineraryOf([
+        { placeId: "ramen", start: "18:00", end: "18:45" },
+        { placeId: "ramen", start: "18:45", end: "19:30" },
+      ]),
+      places,
+      preferences,
+    );
+    expect(score.mealSlotsFilled).toBe(1);
+    expect(score.mealSlotsExpected).toBe(2);
+  });
+
+  it("ignores a restaurant outside both meal windows", () => {
+    const score = scoreItinerary(
+      itineraryOf([{ placeId: "ramen", start: "08:00", end: "08:45" }]),
+      places,
+      preferences,
+    );
+    expect(score.mealSlotsFilled).toBe(0);
+  });
+
+  it("expects meals for every requested day, not just the planned ones", () => {
+    // A planner that silently drops a day must not shrink its own target.
+    const score = scoreItinerary(
+      itineraryOf([{ placeId: "ramen", start: "12:00", end: "12:45" }]),
+      places,
+      { ...preferences, endDate: "2026-10-08" },
+    );
+    expect(score.days).toBe(1);
+    expect(score.mealSlotsExpected).toBe(6);
+    expect(score.mealSlotsFilled).toBe(1);
+  });
+
   it("counts restaurants as filled meal slots against two per day", () => {
     const score = scoreItinerary(
       itineraryOf([

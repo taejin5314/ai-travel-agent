@@ -1,3 +1,4 @@
+import { matchesName } from "@/domain/placeMatch";
 import { PlaceSchema, type Place } from "@/domain/schema/place";
 import type { PlaceArea, PlacesPort } from "@/providers/ports";
 import placesFixture from "../../../fixtures/places.json";
@@ -21,13 +22,6 @@ export class MockPlacesProvider implements PlacesPort {
   }
 
   async findPlacesByName(query: string): Promise<Place[]> {
-    const needle = query.trim().toLowerCase();
-    return this.places.filter(
-      (place) =>
-        place.name.toLowerCase().includes(needle) ||
-        (place.aliases ?? []).some((alias) =>
-          alias.toLowerCase().includes(needle),
-        ),
-    );
+    return this.places.filter((place) => matchesName(place, query));
   }
 }

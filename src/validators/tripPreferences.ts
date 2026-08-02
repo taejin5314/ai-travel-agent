@@ -10,7 +10,8 @@ export type ValidationResult =
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-function tripLengthInDays(startDate: string, endDate: string): number {
+/** Inclusive day count of a trip; 1 for a same-day trip. */
+export function tripLengthInDays(startDate: string, endDate: string): number {
   const start = Date.parse(`${startDate}T00:00:00Z`);
   const end = Date.parse(`${endDate}T00:00:00Z`);
   return Math.round((end - start) / MS_PER_DAY) + 1;

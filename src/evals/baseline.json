@@ -3,7 +3,6 @@
     "scenario": "osaka-two-days",
     "planned": true,
     "met": true,
-    "errors": [],
     "score": {
       "mustVisitCoverage": 1,
       "validatorPassed": true,
@@ -12,7 +11,7 @@
       "activities": 8,
       "crossAreaHops": 0,
       "idleMinutes": 80,
-      "mealSlotsFilled": 4,
+      "mealSlotsFilled": 3,
       "mealSlotsExpected": 4
     }
   },
@@ -20,7 +19,6 @@
     "scenario": "osaka-kyoto-three-days",
     "planned": true,
     "met": true,
-    "errors": [],
     "score": {
       "mustVisitCoverage": 1,
       "validatorPassed": true,
@@ -45,7 +43,6 @@
     "scenario": "pace-relaxed",
     "planned": true,
     "met": true,
-    "errors": [],
     "score": {
       "mustVisitCoverage": 1,
       "validatorPassed": true,
@@ -62,7 +59,6 @@
     "scenario": "pace-packed",
     "planned": true,
     "met": true,
-    "errors": [],
     "score": {
       "mustVisitCoverage": 1,
       "validatorPassed": true,

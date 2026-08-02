@@ -20,7 +20,7 @@ function formatRow(result: ScenarioResult): string {
   if (!result.planned) {
     return `${status}  ${result.scenario}\n        no itinerary: ${result.errors.join(" ")}`;
   }
-  const score = result.score!;
+  const { score } = result;
   const coverage = `${Math.round(score.mustVisitCoverage * 100)}%`;
   return [
     `${status}  ${result.scenario}`,
