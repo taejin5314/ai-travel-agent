@@ -1,7 +1,10 @@
+import { MEAL_WINDOWS, type MealSlot } from "@/agent/planTrip";
+import { resolvePlace } from "@/domain/placeMatch";
 import type { Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import { timeToMinutes, validateItinerary } from "@/validators/itinerary";
+import { tripLengthInDays } from "@/validators/tripPreferences";
 
 /**
  * Deterministic quality signals for one generated itinerary. Every field is
@@ -21,26 +24,27 @@ export type Scorecard = {
   crossAreaHops: number;
   /** Waiting time not explained by the travel leg that follows it. Lower is better. */
   idleMinutes: number;
+  /** Distinct lunch/dinner windows filled, counted once each per day. */
   mealSlotsFilled: number;
-  /** Lunch + dinner per day. */
+  /** Lunch + dinner for every REQUESTED day, so a dropped day lowers the score. */
   mealSlotsExpected: number;
 };
 
 /**
- * Mirrors how the planner resolves a typed must-visit name to a catalog entry
- * (`findPlacesByName`): case-insensitive substring over the name and aliases.
- * Coverage has to be forgiving in the same way, or "오사카성" would score as a
- * miss against a place named "Osaka Castle".
+ * Which meal slot a stop starting at this time fills, if any. A restaurant
+ * outside both windows — breakfast, or a "lunch" pushed to 18:30 behind a
+ * long attraction — fills neither.
  */
-function matchesRequest(place: Place, request: string): boolean {
-  const needle = request.trim().toLowerCase();
-  if (needle.length === 0) {
-    return false;
+function slotAt(startMinutes: number): MealSlot | undefined {
+  for (const [slot, [from, to]] of Object.entries(MEAL_WINDOWS) as [
+    MealSlot,
+    (typeof MEAL_WINDOWS)[MealSlot],
+  ][]) {
+    if (startMinutes >= from && startMinutes < to) {
+      return slot;
+    }
   }
-  return (
-    place.name.toLowerCase().includes(needle) ||
-    (place.aliases ?? []).some((alias) => alias.toLowerCase().includes(needle))
-  );
+  return undefined;
 }
 
 export function scoreItinerary(
@@ -49,13 +53,18 @@ export function scoreItinerary(
   preferences: TripPreferences,
 ): Scorecard {
   const placeById = new Map(places.map((place) => [place.id, place]));
-  const scheduled = itinerary.days.flatMap((day) =>
-    day.activities.map((activity) => placeById.get(activity.placeId)),
+  const scheduledIds = new Set(
+    itinerary.days.flatMap((day) => day.activities.map((a) => a.placeId)),
   );
 
-  const covered = preferences.mustVisit.filter((request) =>
-    scheduled.some((place) => place !== undefined && matchesRequest(place, request)),
-  );
+  // Resolve each request to the ONE place the planner would have picked, then
+  // ask whether that place is in the plan. Asking "did anything matching the
+  // request get scheduled" instead would let Nijo Castle cover a requested
+  // Osaka Castle and hide the regression this metric exists to catch.
+  const covered = preferences.mustVisit.filter((request) => {
+    const resolved = resolvePlace(places, request);
+    return resolved !== undefined && scheduledIds.has(resolved.id);
+  });
   const mustVisitCoverage =
     preferences.mustVisit.length === 0
       ? 1
@@ -76,10 +85,15 @@ export function scoreItinerary(
   for (const day of itinerary.days) {
     let previous: Place | undefined;
     let previousEnd: number | undefined;
+    const filledToday = new Set<MealSlot>();
     for (const activity of day.activities) {
       const place = placeById.get(activity.placeId);
       if (place?.category === "restaurant") {
-        mealSlotsFilled += 1;
+        const slot = slotAt(timeToMinutes(activity.start));
+        if (slot !== undefined && !filledToday.has(slot)) {
+          filledToday.add(slot);
+          mealSlotsFilled += 1;
+        }
       }
       if (previous !== undefined && place !== undefined && place.area !== previous.area) {
         crossAreaHops += 1;
@@ -103,6 +117,11 @@ export function scoreItinerary(
     crossAreaHops,
     idleMinutes,
     mealSlotsFilled,
-    mealSlotsExpected: itinerary.days.length * 2,
+    // Derived from the request, not the output: a planner that drops a day
+    // would otherwise shrink the denominator along with the numerator and
+    // report the omission as a perfect score.
+    mealSlotsExpected:
+      tripLengthInDays(preferences.startDate, preferences.endDate) *
+      Object.keys(MEAL_WINDOWS).length,
   };
 }

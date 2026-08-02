@@ -4,14 +4,14 @@ import { MockRoutesProvider } from "@/providers/mock/routes";
 import { scenarios, type Scenario } from "@/evals/scenarios";
 import { scoreItinerary, type Scorecard } from "@/evals/score";
 
-export type ScenarioResult = {
-  scenario: string;
-  planned: boolean;
-  /** Whether the outcome matched the scenario's `expect`. */
-  met: boolean;
-  errors: string[];
-  score?: Scorecard;
-};
+/**
+ * Discriminated on `planned` so a reader (and the compiler) knows a scorecard
+ * exists exactly when an itinerary was produced — no non-null assertions.
+ * `met` records whether the outcome matched the scenario's `expect`.
+ */
+export type ScenarioResult =
+  | { scenario: string; planned: false; met: boolean; errors: string[] }
+  | { scenario: string; planned: true; met: boolean; score: Scorecard };
 
 /**
  * Runs one scenario end-to-end against the MOCK providers. Offline and
@@ -39,7 +39,6 @@ export async function runScenario(scenario: Scenario): Promise<ScenarioResult> {
     scenario: scenario.name,
     planned: true,
     met: scenario.expect === "plans",
-    errors: [],
     score: scoreItinerary(
       result.itinerary,
       await places.listPlaces(),

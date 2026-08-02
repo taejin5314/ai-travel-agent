@@ -1,3 +1,4 @@
+import { matchesExactly } from "@/domain/placeMatch";
 import type { Activity, DayPlan, Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
@@ -25,6 +26,19 @@ const MAX_WALK_MINUTES = 20;
 const LUNCH_START_MINUTES = 12 * 60;
 const DINNER_START_MINUTES = 17 * 60 + 30;
 const MEAL_HARD_END_MINUTES = 20 * 60;
+
+/**
+ * The two meal slots a day is expected to fill, as [start, end) in minutes.
+ * Exported so the eval scorer classifies a restaurant stop by the same
+ * windows the planner schedules against — otherwise the metric could report a
+ * slot filled that the planner never considered filled.
+ */
+export const MEAL_WINDOWS = {
+  lunch: [LUNCH_START_MINUTES, DINNER_START_MINUTES],
+  dinner: [DINNER_START_MINUTES, MEAL_HARD_END_MINUTES],
+} as const;
+
+export type MealSlot = keyof typeof MEAL_WINDOWS;
 
 export const PACE_MAX_ACTIVITIES_PER_DAY: Record<
   TripPreferences["pace"],
@@ -54,18 +68,6 @@ function minutesToTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function normalize(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function matchesExactly(place: Place, query: string): boolean {
-  const needle = normalize(query);
-  return (
-    normalize(place.name) === needle ||
-    (place.aliases ?? []).some((alias) => normalize(alias) === needle)
-  );
 }
 
 /** Korean keywords the /plan form advertises, mapped to catalog categories. */
@@ -105,6 +107,10 @@ export function ratingScore(place: Place): number {
 /** Higher confidence-weighted rating first; stable for ties. */
 function byRatingDesc(a: Place, b: Place): number {
   return ratingScore(b) - ratingScore(a);
+}
+
+function normalize(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 export function mapInterestsToCategories(

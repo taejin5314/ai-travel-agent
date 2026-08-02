@@ -17,7 +17,9 @@ describe("eval scenarios", () => {
 
     const result = await runScenario(refused[0]);
     expect(result.planned).toBe(false);
-    expect(result.errors.length).toBeGreaterThan(0);
+    if (!result.planned) {
+      expect(result.errors.length).toBeGreaterThan(0);
+    }
   });
 
   it("scores every planned scenario at full must-visit coverage", async () => {
