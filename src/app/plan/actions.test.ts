@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { submitTripPreferences } from "@/app/plan/actions";
-import { initialPlanFormState } from "@/app/plan/formPreferences";
+import { buildItineraryView, initialPlanFormState } from "@/app/plan/formPreferences";
+import { itineraryStore } from "@/db/store";
 
 function buildFormData(fields: Record<string, string>): FormData {
   const formData = new FormData();
@@ -163,6 +164,55 @@ describe("submitTripPreferences", () => {
       expect(result.values.mustVisit).toBe("Osaka Castle,\nDotonbori");
       expect(result.values.startDate).toBe("2026-08-05");
       expect(result.values.endDate).toBe("2026-08-01");
+    }
+  });
+});
+
+describe("submitTripPreferences persistence", () => {
+  it("saves the plan and returns a share id that resolves to the same itinerary", async () => {
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData(validFields),
+    );
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") return;
+    expect(result.planId).toBeDefined();
+
+    const saved = await itineraryStore.get(result.planId!);
+    expect(saved).not.toBeNull();
+    expect(saved?.preferences).toEqual(result.data);
+    expect(buildItineraryView(saved!.itinerary, saved!.places)).toEqual(
+      result.itinerary,
+    );
+  });
+
+  it("stores only the places the itinerary references, not the whole catalog", async () => {
+    // The shared page must render without another provider call, but it has
+    // no reason to carry places nobody visits.
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData(validFields),
+    );
+    if (result.status !== "success" || result.planId === undefined) {
+      throw new Error("expected a saved plan");
+    }
+    const saved = await itineraryStore.get(result.planId);
+    const scheduled = new Set(
+      saved!.itinerary.days.flatMap((d) => d.activities.map((a) => a.placeId)),
+    );
+    expect(new Set(saved!.places.map((p) => p.id))).toEqual(scheduled);
+  });
+
+  it("does not save anything when planning fails", async () => {
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData({ ...validFields, mustVisit: "Atlantis" }),
+    );
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.planId).toBeUndefined();
+      expect(result.planningNotice).toBeDefined();
     }
   });
 });

@@ -72,6 +72,8 @@ export type PlanFormState =
       itinerary?: ItineraryViewDay[];
       planningNotice?: string;
       dataSource?: "google" | "mock";
+      /** Set once the plan is stored; the share link is built from it. */
+      planId?: string;
     }
   | { status: "error"; errors: string[]; values: PlanFormValues };
 

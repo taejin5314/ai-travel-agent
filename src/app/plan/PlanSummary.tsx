@@ -73,11 +73,13 @@ export function PlanSummary({
   itinerary,
   planningNotice,
   dataSource,
+  planId,
 }: {
   data: TripPreferences;
   itinerary?: ItineraryViewDay[];
   planningNotice?: string;
   dataSource?: "google" | "mock";
+  planId?: string;
 }) {
   return (
     <div className="flex w-full flex-col gap-4 rounded-2xl border border-black/10 p-5 text-left dark:border-white/15">
@@ -128,6 +130,15 @@ export function PlanSummary({
         <p className="rounded-xl bg-black/5 px-4 py-3 text-xs text-zinc-600 dark:bg-white/10 dark:text-zinc-400">
           {planningNotice ?? "일정 생성은 준비 중입니다."}
         </p>
+      )}
+
+      {planId !== undefined && (
+        <a
+          href={`/plan/${planId}`}
+          className="rounded-xl bg-black/5 px-4 py-3 text-center text-xs text-zinc-700 underline underline-offset-4 dark:bg-white/10 dark:text-zinc-300"
+        >
+          이 일정의 링크 열기 · 공유하기
+        </a>
       )}
 
       <p className="text-xs text-zinc-500 dark:text-zinc-500">
