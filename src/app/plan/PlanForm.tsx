@@ -29,6 +29,7 @@ export function PlanForm() {
         itinerary={state.itinerary}
         planningNotice={state.planningNotice}
         dataSource={state.dataSource}
+        planId={state.planId}
       />
     );
   }

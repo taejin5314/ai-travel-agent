@@ -1,6 +1,7 @@
 "use server";
 
 import { planTrip } from "@/agent/planTrip";
+import { itineraryStore } from "@/db/store";
 import { TripPreferencesSchema } from "@/domain/schema/tripPreferences";
 import { googleMapsApiKey } from "@/lib/config";
 import { GooglePlacesProvider } from "@/providers/google/places";
@@ -86,10 +87,24 @@ export async function submitTripPreferences(
     };
   }
 
+  // Keep only the places this itinerary actually references, so the shared
+  // page can render without calling Google again.
+  const catalog = await ports.places.listPlaces();
+  const scheduledIds = new Set(
+    plan.itinerary.days.flatMap((day) => day.activities.map((a) => a.placeId)),
+  );
+  const saved = await itineraryStore.save({
+    preferences: parsed.data,
+    itinerary: plan.itinerary,
+    places: catalog.filter((place) => scheduledIds.has(place.id)),
+    dataSource: ports.dataSource,
+  });
+
   return {
     status: "success",
     data: parsed.data,
     dataSource: ports.dataSource,
-    itinerary: buildItineraryView(plan.itinerary, await ports.places.listPlaces()),
+    itinerary: buildItineraryView(plan.itinerary, catalog),
+    planId: saved.id,
   };
 }
