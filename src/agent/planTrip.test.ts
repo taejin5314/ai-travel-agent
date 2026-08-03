@@ -870,3 +870,76 @@ describe("StubLlmProvider", () => {
     );
   });
 });
+
+describe("planTrip cuisine preferences", () => {
+  const eats = { open: "11:00", close: "22:00" };
+  const hotel: Place = {
+    id: "hotel-namba",
+    name: "Hotel Namba",
+    area: "osaka",
+    category: "lodging",
+    location: { lat: 34.6664, lng: 135.5013 },
+    openingHours: [daily, daily, daily, daily, daily, daily, daily],
+    typicalVisitMinutes: 1,
+  };
+  function restaurant(id: string, name: string, rating: number): Place {
+    return {
+      id,
+      name,
+      area: "osaka",
+      category: "restaurant",
+      location: { lat: 34.667, lng: 135.502 },
+      openingHours: [eats, eats, eats, eats, eats, eats, eats],
+      typicalVisitMinutes: 45,
+      rating,
+      reviewCount: 5000,
+    };
+  }
+  // The sushi bar is rated lower, so only a cuisine request can put it first.
+  const catalog = [
+    hotel,
+    restaurant("teppan", "Teppan Grill", 4.8),
+    restaurant("sushi-bar", "Harukoma Sushi", 4.3),
+  ];
+  const oneDay: TripPreferences = {
+    ...preferences,
+    endDate: preferences.startDate,
+    mustVisit: [],
+    interests: [],
+  };
+
+  function plan(cuisines?: TripPreferences["cuisines"]) {
+    return planTrip(
+      { ...oneDay, ...(cuisines !== undefined && { cuisines }) },
+      {
+        places: new MockPlacesProvider(catalog),
+        routes: new MockRoutesProvider(),
+      },
+    );
+  }
+
+  it("changes which restaurant is scheduled when a cuisine is requested", async () => {
+    const [any, sushi] = [await plan(), await plan(["sushi"])];
+    expect(any.ok && sushi.ok).toBe(true);
+    if (any.ok && sushi.ok) {
+      // Rating alone picks the teppan place; asking for sushi overrides it.
+      expect(any.itinerary.days[0].activities[0].placeId).toBe("teppan");
+      expect(sushi.itinerary.days[0].activities[0].placeId).toBe("sushi-bar");
+    }
+  });
+
+  it("still feeds the traveller when nothing matches the request", async () => {
+    const result = await plan(["kaiseki"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const meals = result.itinerary.days[0].activities;
+      expect(meals.length).toBeGreaterThan(0);
+      expect(meals[0].placeId).toBe("teppan");
+    }
+  });
+
+  it("is a no-op when no cuisine is requested", async () => {
+    const [absent, empty] = [await plan(), await plan([])];
+    expect(absent).toEqual(empty);
+  });
+});

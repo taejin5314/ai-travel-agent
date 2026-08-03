@@ -1,5 +1,6 @@
 import type { ZodError } from "zod";
 import type { TripConstraint } from "@/domain/schema/constraint";
+import type { Cuisine } from "@/domain/schema/cuisine";
 import type { Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
@@ -22,6 +23,8 @@ export type PlanFormValues = {
   mustVisit: string;
   interests: string;
   pace: string;
+  /** Checked cuisine values, kept raw so the form can restore them. */
+  cuisines: string[];
   /** Checked constraint values, kept raw so the form can restore them. */
   constraints: string[];
 };
@@ -52,6 +55,28 @@ export const CONSTRAINT_OPTIONS: readonly {
     hint: "걸어갈 만한 거리도 대중교통을 이용합니다",
   },
 ];
+
+/**
+ * The cuisines the form offers. Every entry drives a real catalog search in
+ * the places provider — nothing here is decoration.
+ */
+export const CUISINE_OPTIONS: readonly { value: Cuisine; label: string }[] = [
+  { value: "ramen", label: "라멘" },
+  { value: "sushi", label: "스시" },
+  { value: "okonomiyaki", label: "오코노미야키·타코야키" },
+  { value: "udon-soba", label: "우동·소바" },
+  { value: "yakiniku", label: "야키니쿠·와규" },
+  { value: "kaiseki", label: "가이세키·정식" },
+  { value: "cafe", label: "카페·디저트" },
+];
+
+const CUISINE_LABELS = new Map(
+  CUISINE_OPTIONS.map((option) => [option.value, option.label]),
+);
+
+export function cuisineLabel(cuisine: Cuisine): string {
+  return CUISINE_LABELS.get(cuisine) ?? cuisine;
+}
 
 const CONSTRAINT_LABELS = new Map(
   CONSTRAINT_OPTIONS.map((option) => [option.value, option.label]),
@@ -152,6 +177,7 @@ const FIELD_LABELS: Record<string, string> = {
   mustVisit: "필수 방문지",
   interests: "관심사",
   pace: "여행 속도",
+  cuisines: "먹고 싶은 음식",
   constraints: "제약 조건",
 };
 
@@ -184,6 +210,7 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
   // Checkboxes: several values under one name. Left as raw strings — the Zod
   // enum is what decides whether each is a constraint we honour.
   const constraints = getStrings(formData, "constraints");
+  const cuisines = getStrings(formData, "cuisines");
 
   return {
     startDate: getString(formData, "startDate"),
@@ -196,6 +223,7 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
     mustVisit: splitEntries(getString(formData, "mustVisit")),
     interests: splitEntries(getString(formData, "interests")),
     pace: getString(formData, "pace"),
+    cuisines: cuisines.length > 0 ? cuisines : undefined,
     constraints: constraints.length > 0 ? constraints : undefined,
   };
 }
@@ -211,6 +239,7 @@ export function extractFormValues(formData: FormData): PlanFormValues {
     mustVisit: getString(formData, "mustVisit"),
     interests: getString(formData, "interests"),
     pace: getString(formData, "pace"),
+    cuisines: getStrings(formData, "cuisines"),
     constraints: getStrings(formData, "constraints"),
   };
 }

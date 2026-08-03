@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { Place, PlaceAreaSchema } from "@/domain/schema/place";
+import type { Cuisine } from "@/domain/schema/cuisine";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import type { TransitRide, TravelMode } from "@/domain/schema/travel";
 
@@ -14,6 +15,15 @@ export interface PlacesPort {
   getPlaceById(id: string): Promise<Place | null>;
   /** Case-insensitive, trimmed substring match against place names. */
   findPlacesByName(query: string): Promise<Place[]>;
+  /**
+   * Restaurants serving any of the requested cuisines. An empty request
+   * returns nothing rather than everything: "no preference" is the planner's
+   * business, not the provider's.
+   */
+  findRestaurants(
+    cuisines: readonly Cuisine[],
+    area?: PlaceArea,
+  ): Promise<Place[]>;
 }
 
 /**

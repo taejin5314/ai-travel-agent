@@ -35,6 +35,7 @@ const validFields = {
   mustVisit: "Osaka Castle, Dotonbori",
   interests: "food\nshopping",
   pace: "balanced",
+  cuisines: [] as string[],
   constraints: [] as string[],
 };
 
@@ -50,6 +51,7 @@ describe("buildTripPreferencesCandidate", () => {
       mustVisit: ["Osaka Castle", "Dotonbori"],
       interests: ["food", "shopping"],
       pace: "balanced",
+      cuisines: undefined,
       constraints: undefined,
     });
   });
@@ -121,7 +123,8 @@ describe("extractFormValues", () => {
       buildFormData({
         ...validFields,
         mustVisit: " Osaka Castle ,\nDotonbori,, ",
-        constraints: ["late-start"],
+        cuisines: [],
+      constraints: ["late-start"],
       }),
     );
 
@@ -134,6 +137,7 @@ describe("extractFormValues", () => {
       mustVisit: "Osaka Castle ,\nDotonbori,,",
       interests: "food\nshopping",
       pace: "balanced",
+      cuisines: [],
       constraints: ["late-start"],
     });
   });

@@ -1,5 +1,9 @@
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
-import { constraintLabel, type ItineraryViewDay } from "./formPreferences";
+import {
+  constraintLabel,
+  cuisineLabel,
+  type ItineraryViewDay,
+} from "./formPreferences";
 
 const PACE_LABELS: Record<TripPreferences["pace"], string> = {
   relaxed: "여유롭게",
@@ -152,6 +156,14 @@ export function PlanSummary({
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-600 dark:text-zinc-400">여행 속도</dt>
           <dd>{PACE_LABELS[data.pace]}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-zinc-600 dark:text-zinc-400">먹고 싶은 음식</dt>
+          <dd className="text-right">
+            {data.cuisines && data.cuisines.length > 0
+              ? data.cuisines.map(cuisineLabel).join(", ")
+              : "-"}
+          </dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-600 dark:text-zinc-400">제약 조건</dt>

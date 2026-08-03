@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TripConstraintSchema } from "@/domain/schema/constraint";
+import { CuisineSchema } from "@/domain/schema/cuisine";
 
 const isoDateSchema = z
   .string()
@@ -19,6 +20,8 @@ export const TripPreferencesSchema = z.object({
   mustVisit: z.array(z.string().min(1)),
   interests: z.array(z.string()),
   pace: z.enum(["relaxed", "balanced", "packed"]),
+  // Drives which restaurants are searched for, not just how they rank.
+  cuisines: z.array(CuisineSchema).optional(),
   // A closed set: every member changes the schedule. See constraint.ts.
   constraints: z.array(TripConstraintSchema).optional(),
 });
