@@ -111,22 +111,114 @@ describe("GoogleRoutesProvider mode honesty", () => {
     }));
   }
 
-  it("does not answer a transit question with an hour-long walk", async () => {
+  it("substitutes a measured driving time when transit answers with a walk", async () => {
     // Observed live: asking TRANSIT for Osaka Castle → Dotonbori returns the
-    // walking route (59 min / 4.3 km, all 13 steps WALK). That measurement is
-    // real but answers a different question, and scheduling it would put a
-    // traveller on foot for an hour between two places a train connects.
+    // walking route (59 min, all steps WALK). Driving the same pair measures
+    // 20 minutes over the real road network — a far better stand-in for a
+    // train than either the walk or a straight-line guess.
+    const byMode = new Map([
+      ["TRANSIT", { duration: "3554s", steps: ["WALK", "WALK"] }],
+      ["DRIVE", { duration: "1200s", steps: [] as string[] }],
+    ]);
     const provider = new GoogleRoutesProvider({
       apiKey: "k",
-      fetchFn: fetchRoute(3554, ["WALK", "WALK", "WALK"]),
+      fetchFn: async (_url, init) => {
+        const body = JSON.parse((init as { body: string }).body) as {
+          travelMode: string;
+        };
+        const answer = byMode.get(body.travelMode)!;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            routes: [
+              {
+                duration: answer.duration,
+                legs: [
+                  { steps: answer.steps.map((travelMode) => ({ travelMode })) },
+                ],
+              },
+            ],
+          }),
+        };
+      },
+    });
+    expect(await provider.travelMinutes(nearA, nearB, "transit")).toEqual({
+      minutes: 20,
+      mode: "transit",
+      estimated: true,
+    });
+  });
+
+  it("carries the line names of a real transit route", async () => {
+    const provider = new GoogleRoutesProvider({
+      apiKey: "k",
+      fetchFn: vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          routes: [
+            {
+              duration: "1320s",
+              legs: [
+                {
+                  steps: [
+                    { travelMode: "WALK" },
+                    {
+                      travelMode: "TRANSIT",
+                      transitDetails: {
+                        transitLine: {
+                          name: "Midosuji Line",
+                          nameShort: "미도스지선",
+                          vehicle: { type: "SUBWAY" },
+                        },
+                        stopDetails: {
+                          departureStop: { name: "난바" },
+                          arrivalStop: { name: "우메다" },
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      })),
     });
     const estimate = await provider.travelMinutes(nearA, nearB, "transit");
-    expect(estimate).toEqual(
-      await new MockRoutesProvider().travelMinutes(nearA, nearB, "transit"),
-    );
+    expect(estimate.estimated).toBe(false);
+    expect(estimate.minutes).toBe(22);
+    expect(estimate.lines).toEqual([
+      { line: "미도스지선", vehicle: "SUBWAY", from: "난바", to: "우메다" },
+    ]);
+  });
+
+  it("drops a ride whose line has no name rather than showing a blank", async () => {
+    const provider = new GoogleRoutesProvider({
+      apiKey: "k",
+      fetchFn: vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          routes: [
+            {
+              duration: "600s",
+              legs: [
+                {
+                  steps: [
+                    { travelMode: "TRANSIT", transitDetails: { transitLine: {} } },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      })),
+    });
+    const estimate = await provider.travelMinutes(nearA, nearB, "transit");
     expect(estimate.mode).toBe("transit");
-    expect(estimate.estimated).toBe(true);
-    expect(estimate.minutes).toBeLessThan(60);
+    expect(estimate.lines).toBeUndefined();
   });
 
   it("keeps transit when the route actually contains a ride", async () => {

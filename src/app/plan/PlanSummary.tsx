@@ -45,6 +45,18 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                             must not read like a departure board. */}
                         {item.travel.estimated ? "약 " : ""}
                         {item.travel.minutes}분 이동
+                        {item.travel.lines !== undefined && (
+                          <span className="ml-1 text-zinc-600 dark:text-zinc-400">
+                            ·{" "}
+                            {item.travel.lines
+                              .map((ride) =>
+                                ride.from !== undefined && ride.to !== undefined
+                                  ? `${ride.line} (${ride.from}→${ride.to})`
+                                  : ride.line,
+                              )
+                              .join(" → ")}
+                          </span>
+                        )}
                         {item.travel.estimated && (
                           <span className="ml-1 text-zinc-400">(추정)</span>
                         )}

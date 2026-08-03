@@ -61,7 +61,39 @@ export const ComputeRoutesResponseSchema = z.object({
           .array(
             z.object({
               steps: z
-                .array(z.object({ travelMode: z.string().optional() }))
+                .array(
+                  z.object({
+                    travelMode: z.string().optional(),
+                    /**
+                     * Present only on a ride. Every field is optional because
+                     * this is untrusted input (AGENTS.md §7) — a step missing
+                     * a line name is dropped rather than shown as blank.
+                     */
+                    transitDetails: z
+                      .object({
+                        transitLine: z
+                          .object({
+                            name: z.string().optional(),
+                            nameShort: z.string().optional(),
+                            vehicle: z
+                              .object({ type: z.string().optional() })
+                              .optional(),
+                          })
+                          .optional(),
+                        stopDetails: z
+                          .object({
+                            departureStop: z
+                              .object({ name: z.string().optional() })
+                              .optional(),
+                            arrivalStop: z
+                              .object({ name: z.string().optional() })
+                              .optional(),
+                          })
+                          .optional(),
+                      })
+                      .optional(),
+                  }),
+                )
                 .optional(),
             }),
           )
