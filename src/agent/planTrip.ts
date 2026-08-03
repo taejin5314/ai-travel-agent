@@ -18,7 +18,18 @@ export interface PlanTripPorts {
 }
 
 export type PlanTripResult =
-  | { ok: true; itinerary: Itinerary }
+  | {
+      ok: true;
+      itinerary: Itinerary;
+      /**
+       * Every place the itinerary can reference. This is the catalog PLUS
+       * anything a cuisine search pulled in, which is why the caller gets it
+       * back rather than re-listing: the extra restaurants are not in the
+       * catalog, so a second `listPlaces()` would fail to resolve them — and
+       * would re-bill the search that found them.
+       */
+      places: Place[];
+    }
   | { ok: false; errors: string[] };
 
 const DAY_START_MINUTES = 9 * 60 + 30;
@@ -258,9 +269,23 @@ export async function planTrip(
   const mustVisitIds = new Set(mustVisitPlaces.map((p) => p.id));
   // Restaurants are a separate pool for meal slots; a must-visit restaurant
   // is scheduled as a regular stop instead, never twice.
-  const restaurants = catalog
-    .filter((p) => p.category === "restaurant" && !mustVisitIds.has(p.id))
-    .sort(byRatingDesc);
+  // Requested cuisines widen the pool rather than filter it: a catalog built
+  // from generic queries may contain no ramen shop at all, so there would be
+  // nothing to prefer. Anything found here joins the pool and outranks the
+  // rest within the same area.
+  const requestedCuisines = preferences.cuisines ?? [];
+  const cuisineMatches =
+    requestedCuisines.length > 0
+      ? await ports.places.findRestaurants(requestedCuisines)
+      : [];
+  const preferredRestaurantIds = new Set(cuisineMatches.map((p) => p.id));
+  const restaurantsById = new Map<string, Place>();
+  for (const place of [...catalog, ...cuisineMatches]) {
+    if (place.category === "restaurant" && !mustVisitIds.has(place.id)) {
+      restaurantsById.set(place.id, place);
+    }
+  }
+  const restaurants = [...restaurantsById.values()].sort(byRatingDesc);
   const usedRestaurantIds = new Set<string>();
 
   // Anchor days at the lodging when the entered name matches the catalog.
@@ -297,12 +322,21 @@ export async function planTrip(
   ): Promise<{ activity: Activity; place: Place; end: number } | null> {
     const [earliest, latestEnd] = MEAL_WINDOWS[slot];
     // Preference order, worst penalty first: never eat at the same place
-    // twice in one day, then stay in the current area, then prefer somewhere
-    // new. Each is a fallback, not a filter — a sparse catalog still gets fed.
+    // twice in one day, then stay in the current area, then serve a cuisine
+    // that was asked for, then prefer somewhere new. Each is a fallback, not
+    // a filter — an unmatchable request still gets the traveller fed.
+    //
+    // Area outranks cuisine deliberately: wanting ramen is not a reason to
+    // cross the city at lunchtime. Among the restaurants nearby, the ramen
+    // shop wins.
+    //
     // `restaurants` is pre-sorted by rating, which breaks every tie.
     const rank = (r: Place): number =>
-      (eatenToday.has(r.id) ? 4 : 0) +
-      (previous !== undefined && r.area === previous.area ? 0 : 2) +
+      (eatenToday.has(r.id) ? 8 : 0) +
+      (previous !== undefined && r.area === previous.area ? 0 : 4) +
+      (preferredRestaurantIds.size > 0 && !preferredRestaurantIds.has(r.id)
+        ? 2
+        : 0) +
       (usedRestaurantIds.has(r.id) ? 1 : 0);
     const pool = restaurants
       .map((restaurant, index) => ({ restaurant, index }))
@@ -470,7 +504,10 @@ export async function planTrip(
   // Coverage must be checked against the RESOLVED place names: the user may
   // have typed a partial or aliased name (e.g. "castle", "오사카성") that
   // findPlacesByName resolved to a catalog entry.
-  const check = validateItinerary(itinerary, catalog, {
+  // The catalog alone is not the universe of scheduled places: cuisine
+  // searches add restaurants the catalog never contained.
+  const knownPlaces = [...new Map([...catalog, ...cuisineMatches].map((p) => [p.id, p])).values()];
+  const check = validateItinerary(itinerary, knownPlaces, {
     ...preferences,
     mustVisit: mustVisitPlaces.map((p) => p.name),
   });
@@ -480,5 +517,5 @@ export async function planTrip(
       errors: ["플래너 내부 오류: 생성된 일정이 검증을 통과하지 못했습니다.", ...check.errors],
     };
   }
-  return { ok: true, itinerary };
+  return { ok: true, itinerary, places: knownPlaces };
 }

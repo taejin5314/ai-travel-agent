@@ -2,7 +2,11 @@
 
 import { useActionState } from "react";
 import { submitTripPreferences } from "./actions";
-import { CONSTRAINT_OPTIONS, initialPlanFormState } from "./formPreferences";
+import {
+  CONSTRAINT_OPTIONS,
+  CUISINE_OPTIONS,
+  initialPlanFormState,
+} from "./formPreferences";
 import { PlanSummary } from "./PlanSummary";
 
 const PACE_OPTIONS = [
@@ -135,6 +139,27 @@ export function PlanForm() {
                 defaultChecked={
                   values ? values.pace === option.value : index === 1
                 }
+                className="sr-only"
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className={labelClassName}>먹고 싶은 음식 (선택)</legend>
+        <div className="flex flex-wrap gap-2">
+          {CUISINE_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center rounded-full border border-black/10 px-3 py-1.5 text-sm has-[:checked]:border-foreground has-[:checked]:bg-foreground has-[:checked]:text-background dark:border-white/15"
+            >
+              <input
+                type="checkbox"
+                name="cuisines"
+                value={option.value}
+                defaultChecked={values?.cuisines.includes(option.value)}
                 className="sr-only"
               />
               {option.label}

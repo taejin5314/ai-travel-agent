@@ -26,6 +26,7 @@ const validFields = {
   mustVisit: "Osaka Castle, Dotonbori",
   interests: "food",
   pace: "balanced",
+  cuisines: [] as string[],
   constraints: [] as string[],
 };
 
@@ -46,6 +47,7 @@ describe("submitTripPreferences", () => {
         mustVisit: ["Osaka Castle", "Dotonbori"],
         interests: ["food"],
         pace: "balanced",
+        cuisines: undefined,
         constraints: undefined,
       });
       expect(result.planningNotice).toBeUndefined();
@@ -110,7 +112,8 @@ describe("submitTripPreferences", () => {
         mustVisit: "Osaka Castle, Dotonbori",
         interests: "food",
         pace: "balanced",
-        constraints: [] as string[],
+        cuisines: [] as string[],
+  constraints: [] as string[],
       },
     });
   });
@@ -149,7 +152,8 @@ describe("submitTripPreferences", () => {
         mustVisit: "Osaka Castle, Dotonbori",
         interests: "food",
         pace: "balanced",
-        constraints: [] as string[],
+        cuisines: [] as string[],
+  constraints: [] as string[],
       });
     }
   });
