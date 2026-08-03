@@ -16,9 +16,27 @@ export interface PlacesPort {
   findPlacesByName(query: string): Promise<Place[]>;
 }
 
+/**
+ * One hop as a router answered it. The answer carries its own provenance
+ * because the question and the answer can disagree: asking for TRANSIT and
+ * receiving an all-walking route is a real, observed response, and reporting
+ * that as transit would put a fabricated mode in front of the user.
+ */
+export type TravelEstimate = {
+  /** One-way travel time in minutes; a positive integer. */
+  minutes: number;
+  /** What the traveller actually does, which may differ from the mode asked for. */
+  mode: TravelMode;
+  /** True when no routing service measured this and a model produced it. */
+  estimated: boolean;
+};
+
 export interface RoutesPort {
-  /** Estimated one-way travel time in minutes; a positive integer. */
-  travelMinutes(from: Place, to: Place, mode: TravelMode): Promise<number>;
+  travelMinutes(
+    from: Place,
+    to: Place,
+    mode: TravelMode,
+  ): Promise<TravelEstimate>;
 }
 
 /**

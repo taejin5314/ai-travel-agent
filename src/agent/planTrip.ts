@@ -4,7 +4,7 @@ import type { Activity, DayPlan, Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
-import type { PlacesPort, RoutesPort } from "@/providers/ports";
+import type { PlacesPort, RoutesPort, TravelEstimate } from "@/providers/ports";
 import {
   timeToMinutes,
   validateItinerary,
@@ -185,14 +185,26 @@ async function travelBetween(
     return undefined;
   }
   const walk = await routes.travelMinutes(from, to, "walk");
-  if (walk <= maxWalkMinutes) {
-    // Providers are external and untrusted (AGENTS.md §7): the port documents
-    // a positive integer, but a zero would silently violate TravelLegSchema,
-    // so drop it here rather than emit an invalid leg.
-    return walk > 0 ? { minutes: walk, mode: "walk" } : undefined;
+  if (walk.minutes <= maxWalkMinutes) {
+    return toLeg(walk);
   }
-  const transit = await routes.travelMinutes(from, to, "transit");
-  return transit > 0 ? { minutes: transit, mode: "transit" } : undefined;
+  // The router decides what this actually is: a transit query can come back
+  // as a walking route, and the leg records the answer, not the question.
+  return toLeg(await routes.travelMinutes(from, to, "transit"));
+}
+
+function toLeg(estimate: TravelEstimate): TravelLeg | undefined {
+  // Providers are external and untrusted (AGENTS.md §7): the port documents a
+  // positive integer, but a zero would silently violate TravelLegSchema, so
+  // drop it here rather than emit an invalid leg.
+  if (estimate.minutes <= 0) {
+    return undefined;
+  }
+  return {
+    minutes: estimate.minutes,
+    mode: estimate.mode,
+    ...(estimate.estimated && { estimated: true as const }),
+  };
 }
 
 function legMinutes(leg: TravelLeg | undefined): number {

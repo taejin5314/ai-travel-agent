@@ -40,7 +40,14 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                     {itemIndex > 0 && item.travel !== undefined && (
                       <p className="py-0.5 text-xs text-zinc-500">
                         {item.travel.mode === "walk" ? "🚶" : "🚃"}{" "}
+                        {/* An estimate is marked as one. It comes from a
+                            straight-line model, not a routing service, and
+                            must not read like a departure board. */}
+                        {item.travel.estimated ? "약 " : ""}
                         {item.travel.minutes}분 이동
+                        {item.travel.estimated && (
+                          <span className="ml-1 text-zinc-400">(추정)</span>
+                        )}
                       </p>
                     )}
                     <div className="flex justify-between gap-4">

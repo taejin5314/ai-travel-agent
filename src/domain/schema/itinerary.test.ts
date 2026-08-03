@@ -37,6 +37,24 @@ describe("ActivitySchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a leg flagged as estimated", () => {
+    const result = ActivitySchema.safeParse({
+      ...validActivity,
+      travel: { minutes: 136, mode: "transit", estimated: true },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects estimated: false rather than storing a redundant flag", () => {
+    // Absent means measured. Allowing both spellings would let two records
+    // say the same thing differently and make saved plans harder to compare.
+    const result = ActivitySchema.safeParse({
+      ...validActivity,
+      travel: { minutes: 20, mode: "transit", estimated: false },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects a travel leg of zero minutes", () => {
     // "No travel" is expressed by omitting the leg, never by storing 0.
     const result = ActivitySchema.safeParse({

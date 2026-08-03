@@ -15,6 +15,16 @@ export const TravelModeSchema = z.enum(["walk", "transit"]);
 export const TravelLegSchema = z.object({
   minutes: z.number().int().positive(),
   mode: TravelModeSchema,
+  /**
+   * Present only when no routing service measured this leg and the duration
+   * came from a straight-line model. Absent means measured.
+   *
+   * The flag exists because the alternative is lying: when the Routes API has
+   * no answer the provider falls back to an estimate, and without this the
+   * itinerary showed a 37 km straight-line guess as "🚃 136분" — visually
+   * indistinguishable from a real departure board.
+   */
+  estimated: z.literal(true).optional(),
 });
 
 export type TravelMode = z.infer<typeof TravelModeSchema>;

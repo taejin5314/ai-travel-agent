@@ -8,7 +8,7 @@ import {
   ratingScore,
   scheduleBoundsFor,
 } from "@/agent/planTrip";
-import type { RoutesPort } from "@/providers/ports";
+import type { RoutesPort, TravelEstimate } from "@/providers/ports";
 import { MockPlacesProvider } from "@/providers/mock/places";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { LLM_MODEL_ID, StubLlmProvider } from "@/providers/llm/stub";
@@ -591,8 +591,8 @@ describe("planTrip travel legs", () => {
     // at 1, but provider output is untrusted (AGENTS.md §7): a zero must not
     // become a TravelLeg, which requires minutes > 0.
     class ZeroRoutesProvider implements RoutesPort {
-      async travelMinutes(): Promise<number> {
-        return 0;
+      async travelMinutes(): Promise<TravelEstimate> {
+        return { minutes: 0, mode: "walk", estimated: true };
       }
     }
     const result = await planTrip(oneDay, {

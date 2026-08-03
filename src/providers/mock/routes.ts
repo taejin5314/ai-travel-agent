@@ -1,5 +1,5 @@
 import type { Place } from "@/domain/schema/place";
-import type { RoutesPort, TravelMode } from "@/providers/ports";
+import type { RoutesPort, TravelEstimate, TravelMode } from "@/providers/ports";
 
 const WALK_KM_PER_HOUR = 4.5;
 const TRANSIT_KM_PER_HOUR = 20;
@@ -23,13 +23,26 @@ function haversineDistanceKm(from: Place, to: Place): number {
   return EARTH_RADIUS_KM * c;
 }
 
+/**
+ * Straight-line travel model. Everything it returns is `estimated: true` —
+ * it has never consulted a router, and saying otherwise would make the flag
+ * meaningless exactly where it matters most.
+ */
 export class MockRoutesProvider implements RoutesPort {
-  async travelMinutes(from: Place, to: Place, mode: TravelMode): Promise<number> {
+  async travelMinutes(
+    from: Place,
+    to: Place,
+    mode: TravelMode,
+  ): Promise<TravelEstimate> {
     const distanceKm = haversineDistanceKm(from, to);
     const speedKmPerHour = mode === "walk" ? WALK_KM_PER_HOUR : TRANSIT_KM_PER_HOUR;
     const overheadMinutes = mode === "walk" ? 0 : TRANSIT_OVERHEAD_MINUTES;
     const minutes = (distanceKm / speedKmPerHour) * 60 + overheadMinutes;
 
-    return Math.max(1, Math.ceil(minutes));
+    return {
+      minutes: Math.max(1, Math.ceil(minutes)),
+      mode,
+      estimated: true,
+    };
   }
 }
