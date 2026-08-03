@@ -212,3 +212,121 @@ describe("GooglePlacesProvider", () => {
     );
   });
 });
+
+describe("GooglePlacesProvider typing and durations", () => {
+  const osakaCastle = {
+    id: "gp-castle",
+    displayName: { text: "오사카 성" },
+    location: { latitude: 34.6873, longitude: 135.5262 },
+    rating: 4.4,
+    userRatingCount: 98269,
+    // Real shape: primaryType says castle, but `museum` rides along in types.
+    primaryType: "castle",
+    types: ["castle", "tourist_attraction", "museum", "historical_place"],
+  };
+  const alleyShrine = {
+    id: "gp-hozenji",
+    displayName: { text: "호젠지" },
+    location: { latitude: 34.6684, longitude: 135.5031 },
+    rating: 4.4,
+    userRatingCount: 4467,
+    primaryType: "buddhist_temple",
+    types: ["buddhist_temple", "tourist_attraction", "place_of_worship"],
+  };
+
+  async function place(raw: unknown) {
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({ places: [raw] }),
+    });
+    return (await provider.findPlacesByName("x"))[0];
+  }
+
+  it("lets primaryType win over the types soup", async () => {
+    // Regression: `museum` outranked `tourist_attraction` in the fallback
+    // order, so Osaka Castle was filed as culture and given 75 minutes.
+    const castle = await place(osakaCastle);
+    expect(castle.category).toBe("sight");
+    expect(castle.typicalVisitMinutes).toBe(120);
+  });
+
+  it("gives an alley shrine and a castle materially different visits", async () => {
+    const [castle, shrine] = [await place(osakaCastle), await place(alleyShrine)];
+    expect(shrine.typicalVisitMinutes).toBe(45);
+    expect(castle.typicalVisitMinutes).toBeGreaterThan(
+      shrine.typicalVisitMinutes * 2,
+    );
+  });
+
+  it("falls back to types when primaryType is absent", async () => {
+    const { primaryType: _omitted, ...withoutPrimary } = osakaCastle;
+    const castle = await place(withoutPrimary);
+    // `castle` is still in types, so the type table still finds it.
+    expect(castle.typicalVisitMinutes).toBe(120);
+  });
+
+  it("falls back to the category default for an unrecognised place", async () => {
+    const odd = await place({
+      ...osakaCastle,
+      primaryType: "wedding_venue",
+      types: ["wedding_venue"],
+    });
+    expect(odd.category).toBe("sight");
+    expect(odd.typicalVisitMinutes).toBe(90);
+  });
+
+  it("requests primaryType from the API", async () => {
+    const fetchFn = fakeFetch({ places: [osakaCastle] });
+    const provider = new GooglePlacesProvider({ apiKey: "k", fetchFn });
+    await provider.findPlacesByName("x");
+    const headers = (fetchFn.mock.calls[0][1] as { headers: Record<string, string> })
+      .headers;
+    expect(headers["X-Goog-FieldMask"]).toContain("primaryType");
+  });
+});
+
+describe("GooglePlacesProvider generic types", () => {
+  it("does not let a generic primaryType outrank a specific type", async () => {
+    // 구로몬 시장 really comes back as primaryType `tourist_attraction` with
+    // `market` behind it. Taking the primary at face value filed a food
+    // market as a generic sight, which also removed it from the "음식"
+    // interest.
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({
+        places: [
+          {
+            id: "gp-kuromon",
+            displayName: { text: "구로몬 시장" },
+            location: { latitude: 34.6654, longitude: 135.5063 },
+            primaryType: "tourist_attraction",
+            types: ["tourist_attraction", "market", "point_of_interest"],
+          },
+        ],
+      }),
+    });
+    const market = (await provider.findPlacesByName("구로몬"))[0];
+    expect(market.category).toBe("food");
+    expect(market.typicalVisitMinutes).toBe(60);
+  });
+
+  it("still uses the catch-all when nothing specific is offered", async () => {
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({
+        places: [
+          {
+            id: "gp-vague",
+            displayName: { text: "무언가" },
+            location: { latitude: 34.67, longitude: 135.5 },
+            primaryType: "tourist_attraction",
+            types: ["tourist_attraction", "point_of_interest"],
+          },
+        ],
+      }),
+    });
+    const vague = (await provider.findPlacesByName("무언가"))[0];
+    expect(vague.category).toBe("sight");
+    expect(vague.typicalVisitMinutes).toBe(60);
+  });
+});
