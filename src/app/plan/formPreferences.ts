@@ -99,6 +99,8 @@ export type ItineraryViewDay = {
     travel?: TravelLeg;
     /** The stop on Google Maps. */
     placeUrl: string;
+    /** Where the stop is, for drawing the day's shape. Absent if unknown. */
+    location?: { lat: number; lng: number };
     /**
      * Google Maps directions for the hop that reaches this stop. Absent on
      * the first stop of a day, and whenever the place is unknown.
@@ -140,6 +142,7 @@ export function buildItineraryView(
         rating: place?.rating,
         travel: activity.travel,
         placeUrl: place === undefined ? UNKNOWN_PLACE_URL : placeUrl(place),
+        ...(place !== undefined && { location: place.location }),
         ...(place !== undefined &&
           previous !== undefined && {
             directionsUrl: directionsUrl(

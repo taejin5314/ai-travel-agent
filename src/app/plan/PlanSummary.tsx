@@ -1,4 +1,5 @@
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
+import { DayMap } from "./DayMap";
 import {
   constraintLabel,
   cuisineLabel,
@@ -35,6 +36,8 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
             {day.items.length === 0 ? (
               <p className="text-sm text-zinc-500">자유 시간</p>
             ) : (
+              <>
+              <DayMap items={day.items} />
               <ul className="flex flex-col gap-1 text-sm">
                 {day.items.map((item, itemIndex) => (
                   <li key={`${day.date}-${item.start}`}>
@@ -81,6 +84,10 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                     )}
                     <div className="flex justify-between gap-4">
                       <span>
+                        {/* Same number as the marker on the map above. */}
+                        <span className="mr-1.5 text-xs tabular-nums text-zinc-500">
+                          {itemIndex + 1}
+                        </span>
                         {item.kind === "meal" ? "🍽️ " : ""}
                         <a
                           href={item.placeUrl}
@@ -103,6 +110,7 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                   </li>
                 ))}
               </ul>
+              </>
             )}
           </li>
         ))}
