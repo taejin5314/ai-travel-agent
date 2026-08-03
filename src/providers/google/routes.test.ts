@@ -40,7 +40,11 @@ describe("GoogleRoutesProvider", () => {
       apiKey: "k",
       fetchFn: fakeFetch(605), // 10.08 min
     });
-    expect(await provider.travelMinutes(nearA, nearB, "walk")).toBe(11);
+    expect(await provider.travelMinutes(nearA, nearB, "walk")).toEqual({
+      minutes: 11,
+      mode: "walk",
+      estimated: false,
+    });
   });
 
   it("caches by (from, to, mode)", async () => {
@@ -59,11 +63,12 @@ describe("GoogleRoutesProvider", () => {
     const fetchFn = fakeFetch(1);
     const provider = new GoogleRoutesProvider({ apiKey: "k", fetchFn });
 
-    const minutes = await provider.travelMinutes(nearA, farAway, "walk");
+    const estimate = await provider.travelMinutes(nearA, farAway, "walk");
     expect(fetchFn.mock.calls.length).toBe(0);
-    expect(minutes).toBe(
+    expect(estimate).toEqual(
       await new MockRoutesProvider().travelMinutes(nearA, farAway, "walk"),
     );
+    expect(estimate.estimated).toBe(true);
   });
 
   it("falls back to the deterministic estimate when Google returns no route", async () => {
@@ -71,16 +76,97 @@ describe("GoogleRoutesProvider", () => {
       apiKey: "k",
       fetchFn: fakeFetch(null),
     });
-    const minutes = await provider.travelMinutes(nearA, nearB, "transit");
-    expect(minutes).toBe(
+    const estimate = await provider.travelMinutes(nearA, nearB, "transit");
+    expect(estimate).toEqual(
       await new MockRoutesProvider().travelMinutes(nearA, nearB, "transit"),
     );
+    expect(estimate.estimated).toBe(true);
   });
 
   it("returns 1 minute for identical places without calling the API", async () => {
     const fetchFn = fakeFetch(999);
     const provider = new GoogleRoutesProvider({ apiKey: "k", fetchFn });
-    expect(await provider.travelMinutes(nearA, nearA, "walk")).toBe(1);
+    expect(await provider.travelMinutes(nearA, nearA, "walk")).toEqual({
+      minutes: 1,
+      mode: "walk",
+      estimated: true,
+    });
     expect(fetchFn.mock.calls.length).toBe(0);
+  });
+});
+
+describe("GoogleRoutesProvider mode honesty", () => {
+  function fetchRoute(durationSeconds: number, stepModes: string[]) {
+    return vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        routes: [
+          {
+            duration: `${durationSeconds}s`,
+            legs: [{ steps: stepModes.map((travelMode) => ({ travelMode })) }],
+          },
+        ],
+      }),
+    }));
+  }
+
+  it("records a transit answer made entirely of walking steps as a walk", async () => {
+    // Observed live: asking TRANSIT for Osaka Castle → Dotonbori returns the
+    // walking route (59 min / 4.3 km, all 13 steps WALK). Reporting that as
+    // transit put a train icon on a one-hour stroll.
+    const provider = new GoogleRoutesProvider({
+      apiKey: "k",
+      fetchFn: fetchRoute(3554, ["WALK", "WALK", "WALK"]),
+    });
+    expect(await provider.travelMinutes(nearA, nearB, "transit")).toEqual({
+      minutes: 60,
+      mode: "walk",
+      estimated: false,
+    });
+  });
+
+  it("keeps transit when the route actually contains a ride", async () => {
+    const provider = new GoogleRoutesProvider({
+      apiKey: "k",
+      fetchFn: fetchRoute(1200, ["WALK", "TRANSIT", "WALK"]),
+    });
+    expect(await provider.travelMinutes(nearA, nearB, "transit")).toEqual({
+      minutes: 20,
+      mode: "transit",
+      estimated: false,
+    });
+  });
+
+  it("does not infer walking from a route with no step detail", async () => {
+    // Absent steps mean we do not know, and inventing an answer is the
+    // behaviour this change removes.
+    const provider = new GoogleRoutesProvider({
+      apiKey: "k",
+      fetchFn: fetchRoute(1200, []),
+    });
+    const estimate = await provider.travelMinutes(nearA, nearB, "transit");
+    expect(estimate.mode).toBe("transit");
+    expect(estimate.estimated).toBe(false);
+  });
+
+  it("asks for the step modes it needs to tell them apart", async () => {
+    const calls: { headers: Record<string, string> }[] = [];
+    const provider = new GoogleRoutesProvider({
+      apiKey: "k",
+      fetchFn: async (_url, init) => {
+        calls.push(init as { headers: Record<string, string> });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ routes: [{ duration: "600s" }] }),
+        };
+      },
+    });
+    await provider.travelMinutes(nearA, nearB, "transit");
+
+    expect(calls[0].headers["X-Goog-FieldMask"]).toContain(
+      "routes.legs.steps.travelMode",
+    );
   });
 });

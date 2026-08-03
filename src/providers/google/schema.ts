@@ -52,6 +52,20 @@ export const ComputeRoutesResponseSchema = z.object({
       z.object({
         /** e.g. "1234s" */
         duration: z.string().regex(/^\d+(\.\d+)?s$/),
+        /**
+         * Per-step modes. A TRANSIT query can come back as an all-WALK route
+         * when no transit is available (or served) for the pair, and the
+         * duration alone gives no way to tell.
+         */
+        legs: z
+          .array(
+            z.object({
+              steps: z
+                .array(z.object({ travelMode: z.string().optional() }))
+                .optional(),
+            }),
+          )
+          .optional(),
       }),
     )
     .optional(),

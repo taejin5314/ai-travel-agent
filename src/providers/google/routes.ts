@@ -1,5 +1,6 @@
+import type { z } from "zod";
 import type { Place } from "@/domain/schema/place";
-import type { RoutesPort, TravelMode } from "@/providers/ports";
+import type { RoutesPort, TravelEstimate, TravelMode } from "@/providers/ports";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { ComputeRoutesResponseSchema } from "@/providers/google/schema";
 
@@ -39,10 +40,26 @@ function haversineKm(from: Place, to: Place): number {
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+type ComputeRoute = NonNullable<
+  z.infer<typeof ComputeRoutesResponseSchema>["routes"]
+>[number];
+
+/**
+ * True when the route contains steps and none of them is a ride. An empty or
+ * absent step list is NOT treated as walking — we simply do not know, and
+ * guessing is the behaviour this whole change exists to remove.
+ */
+function isWalkingOnly(route: ComputeRoute): boolean {
+  const steps = route.legs?.flatMap((leg) => leg.steps ?? []) ?? [];
+  return (
+    steps.length > 0 && steps.every((step) => step.travelMode === "WALK")
+  );
+}
+
 export class GoogleRoutesProvider implements RoutesPort {
   private readonly apiKey: string;
   private readonly fetchFn: FetchLike;
-  private readonly cache = new Map<string, number>();
+  private readonly cache = new Map<string, TravelEstimate>();
   /** Deterministic fallback when the API has no route (e.g. transit gaps). */
   private readonly fallback = new MockRoutesProvider();
 
@@ -51,9 +68,13 @@ export class GoogleRoutesProvider implements RoutesPort {
     this.fetchFn = options.fetchFn ?? (fetch as unknown as FetchLike);
   }
 
-  async travelMinutes(from: Place, to: Place, mode: TravelMode): Promise<number> {
+  async travelMinutes(
+    from: Place,
+    to: Place,
+    mode: TravelMode,
+  ): Promise<TravelEstimate> {
     if (from.id === to.id) {
-      return 1;
+      return { minutes: 1, mode, estimated: true };
     }
     const cacheKey = `${from.id}|${to.id}|${mode}`;
     const cached = this.cache.get(cacheKey);
@@ -72,7 +93,9 @@ export class GoogleRoutesProvider implements RoutesPort {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": this.apiKey,
-        "X-Goog-FieldMask": "routes.duration",
+        // steps.travelMode is what exposes an all-walking answer to a TRANSIT
+        // question; the duration alone cannot be told apart from a real ride.
+        "X-Goog-FieldMask": "routes.duration,routes.legs.steps.travelMode",
       },
       body: JSON.stringify({
         origin: {
@@ -92,16 +115,25 @@ export class GoogleRoutesProvider implements RoutesPort {
       throw new Error(`Google Routes computeRoutes failed (HTTP ${response.status})`);
     }
     const parsed = ComputeRoutesResponseSchema.parse(await response.json());
-    const duration = parsed.routes?.[0]?.duration;
+    const route = parsed.routes?.[0];
 
-    let minutes: number;
-    if (duration === undefined) {
-      // No route (common for short-hop transit) — deterministic estimate.
-      minutes = await this.fallback.travelMinutes(from, to, mode);
+    let estimate: TravelEstimate;
+    if (route === undefined) {
+      // No route at all. Common beyond walking range when transit is not
+      // served for the pair; the model is the only answer available, and it
+      // is labelled as one.
+      estimate = await this.fallback.travelMinutes(from, to, mode);
     } else {
-      minutes = Math.max(1, Math.ceil(Number.parseFloat(duration) / 60));
+      estimate = {
+        minutes: Math.max(1, Math.ceil(Number.parseFloat(route.duration) / 60)),
+        // A transit query answered entirely with walking steps IS a walk.
+        // Reporting the requested mode here is what put "🚃 60분" on a
+        // 4.3 km stroll.
+        mode: mode === "transit" && isWalkingOnly(route) ? "walk" : mode,
+        estimated: false,
+      };
     }
-    this.cache.set(cacheKey, minutes);
-    return minutes;
+    this.cache.set(cacheKey, estimate);
+    return estimate;
   }
 }
