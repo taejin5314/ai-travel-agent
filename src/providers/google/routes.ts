@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { Place } from "@/domain/schema/place";
+import type { TransitRide } from "@/domain/schema/travel";
 import type { RoutesPort, TravelEstimate, TravelMode } from "@/providers/ports";
 import { MockRoutesProvider } from "@/providers/mock/routes";
 import { ComputeRoutesResponseSchema } from "@/providers/google/schema";
@@ -56,6 +57,33 @@ function isWalkingOnly(route: ComputeRoute): boolean {
   );
 }
 
+/**
+ * The rides in a transit route, in order. A step whose line has no name is
+ * dropped: "이름 없는 노선" helps nobody and this is untrusted input.
+ */
+function ridesOf(route: ComputeRoute): TransitRide[] {
+  const rides: TransitRide[] = [];
+  for (const step of route.legs?.flatMap((leg) => leg.steps ?? []) ?? []) {
+    const details = step.transitDetails;
+    const line = details?.transitLine;
+    const name = line?.nameShort ?? line?.name;
+    if (details === undefined || name === undefined || name.length === 0) {
+      continue;
+    }
+    rides.push({
+      line: name,
+      ...(line?.vehicle?.type !== undefined && { vehicle: line.vehicle.type }),
+      ...(details.stopDetails?.departureStop?.name !== undefined && {
+        from: details.stopDetails.departureStop.name,
+      }),
+      ...(details.stopDetails?.arrivalStop?.name !== undefined && {
+        to: details.stopDetails.arrivalStop.name,
+      }),
+    });
+  }
+  return rides;
+}
+
 export class GoogleRoutesProvider implements RoutesPort {
   private readonly apiKey: string;
   private readonly fetchFn: FetchLike;
@@ -66,6 +94,64 @@ export class GoogleRoutesProvider implements RoutesPort {
   constructor(options: GoogleRoutesProviderOptions) {
     this.apiKey = options.apiKey;
     this.fetchFn = options.fetchFn ?? (fetch as unknown as FetchLike);
+  }
+
+  private async fetchRoute(
+    from: Place,
+    to: Place,
+    travelMode: "WALK" | "TRANSIT" | "DRIVE",
+  ): Promise<ComputeRoute | undefined> {
+    const response = await this.fetchFn(ROUTES_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": this.apiKey,
+        // steps.travelMode exposes an all-walking answer to a TRANSIT
+        // question; the duration alone cannot be told apart from a real ride.
+        // transitDetails is where the line names live.
+        "X-Goog-FieldMask":
+          "routes.duration,routes.legs.steps.travelMode,routes.legs.steps.transitDetails",
+      },
+      body: JSON.stringify({
+        origin: {
+          location: {
+            latLng: { latitude: from.location.lat, longitude: from.location.lng },
+          },
+        },
+        destination: {
+          location: {
+            latLng: { latitude: to.location.lat, longitude: to.location.lng },
+          },
+        },
+        travelMode,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`Google Routes computeRoutes failed (HTTP ${response.status})`);
+    }
+    const parsed = ComputeRoutesResponseSchema.parse(await response.json());
+    return parsed.routes?.[0];
+  }
+
+  /**
+   * Best available stand-in when transit routing is unavailable.
+   *
+   * Driving is measured over the real road network, so it beats the
+   * straight-line model by a wide margin — Namba to Fushimi Inari is 52
+   * minutes by road against the model's 125. It is still a proxy for a train
+   * ride, never a transit measurement, so it stays flagged as an estimate and
+   * carries no line names.
+   */
+  private async estimateTransit(from: Place, to: Place): Promise<TravelEstimate> {
+    const driving = await this.fetchRoute(from, to, "DRIVE");
+    if (driving === undefined) {
+      return this.fallback.travelMinutes(from, to, "transit");
+    }
+    return {
+      minutes: Math.max(1, Math.ceil(Number.parseFloat(driving.duration) / 60)),
+      mode: "transit",
+      estimated: true,
+    };
   }
 
   async travelMinutes(
@@ -90,54 +176,36 @@ export class GoogleRoutesProvider implements RoutesPort {
       return estimate;
     }
 
-    const response = await this.fetchFn(ROUTES_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": this.apiKey,
-        // steps.travelMode is what exposes an all-walking answer to a TRANSIT
-        // question; the duration alone cannot be told apart from a real ride.
-        "X-Goog-FieldMask": "routes.duration,routes.legs.steps.travelMode",
-      },
-      body: JSON.stringify({
-        origin: {
-          location: {
-            latLng: { latitude: from.location.lat, longitude: from.location.lng },
-          },
-        },
-        destination: {
-          location: {
-            latLng: { latitude: to.location.lat, longitude: to.location.lng },
-          },
-        },
-        travelMode: mode === "walk" ? "WALK" : "TRANSIT",
-      }),
-    });
-    if (!response.ok) {
-      throw new Error(`Google Routes computeRoutes failed (HTTP ${response.status})`);
-    }
-    const parsed = ComputeRoutesResponseSchema.parse(await response.json());
-    const route = parsed.routes?.[0];
+    const route = await this.fetchRoute(
+      from,
+      to,
+      mode === "walk" ? "WALK" : "TRANSIT",
+    );
 
     let estimate: TravelEstimate;
     if (route === undefined) {
-      // No route at all. Common beyond walking range when transit is not
-      // served for the pair; the model is the only answer available, and it
-      // is labelled as one.
-      estimate = await this.fallback.travelMinutes(from, to, mode);
+      // No route at all — what an unserved transit pair returns. This is the
+      // Namba-to-Fushimi-Inari case that used to surface as a 136-minute
+      // straight-line guess; driving measures the same corridor at 52.
+      estimate =
+        mode === "transit"
+          ? await this.estimateTransit(from, to)
+          : await this.fallback.travelMinutes(from, to, mode);
     } else if (mode === "transit" && isWalkingOnly(route)) {
       // A transit question answered entirely with walking steps is not a
       // transit answer — this key is served the walking route instead. The
       // measurement is real but it answers a different question, so fall back
-      // to the model and flag it. Reporting the walk here would be honest and
-      // still wrong: the planner would schedule an hour on foot between two
-      // places a train connects in twenty minutes.
-      estimate = await this.fallback.travelMinutes(from, to, mode);
+      // and flag it. Reporting the walk here would be honest and still wrong:
+      // the planner would schedule an hour on foot between two places a train
+      // connects in twenty minutes.
+      estimate = await this.estimateTransit(from, to);
     } else {
+      const rides = mode === "transit" ? ridesOf(route) : [];
       estimate = {
         minutes: Math.max(1, Math.ceil(Number.parseFloat(route.duration) / 60)),
         mode,
         estimated: false,
+        ...(rides.length > 0 && { lines: rides }),
       };
     }
     this.cache.set(cacheKey, estimate);

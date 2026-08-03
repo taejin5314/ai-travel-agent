@@ -12,6 +12,16 @@ export const TravelModeSchema = z.enum(["walk", "transit"]);
  * a zero-minute leg means "no travel", which is expressed by omitting the leg
  * entirely rather than by storing 0.
  */
+/** One ride on one line, as a router reported it. */
+export const TransitRideSchema = z.object({
+  /** Line name as riders know it, e.g. "미도스지선". */
+  line: z.string().min(1),
+  /** Vehicle kind when the router says so, e.g. SUBWAY, TRAIN, BUS. */
+  vehicle: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
 export const TravelLegSchema = z.object({
   minutes: z.number().int().positive(),
   mode: TravelModeSchema,
@@ -25,7 +35,15 @@ export const TravelLegSchema = z.object({
    * indistinguishable from a real departure board.
    */
   estimated: z.literal(true).optional(),
+  /**
+   * The rides that make up a transit leg, in order — "미도스지선", "JR 나라선".
+   * Only ever present on a measured transit leg: an estimate has no idea
+   * which train you would take, and inventing one would be the exact lie
+   * this field exists to replace.
+   */
+  lines: z.array(TransitRideSchema).optional(),
 });
 
 export type TravelMode = z.infer<typeof TravelModeSchema>;
+export type TransitRide = z.infer<typeof TransitRideSchema>;
 export type TravelLeg = z.infer<typeof TravelLegSchema>;

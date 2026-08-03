@@ -204,6 +204,8 @@ function toLeg(estimate: TravelEstimate): TravelLeg | undefined {
     minutes: estimate.minutes,
     mode: estimate.mode,
     ...(estimate.estimated && { estimated: true as const }),
+    ...(estimate.lines !== undefined &&
+      estimate.lines.length > 0 && { lines: estimate.lines }),
   };
 }
 

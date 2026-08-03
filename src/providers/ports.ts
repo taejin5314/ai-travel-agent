@@ -1,7 +1,7 @@
 import type { z } from "zod";
 import type { Place, PlaceAreaSchema } from "@/domain/schema/place";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
-import type { TravelMode } from "@/domain/schema/travel";
+import type { TransitRide, TravelMode } from "@/domain/schema/travel";
 
 export type PlaceArea = z.infer<typeof PlaceAreaSchema>;
 // Re-exported, not declared here: an Activity records the mode of the hop that
@@ -29,6 +29,11 @@ export type TravelEstimate = {
   mode: TravelMode;
   /** True when no routing service measured this and a model produced it. */
   estimated: boolean;
+  /**
+   * The rides a measured transit route is made of. Never set on an estimate:
+   * a proxy duration knows nothing about which train you would board.
+   */
+  lines?: TransitRide[];
 };
 
 export interface RoutesPort {
