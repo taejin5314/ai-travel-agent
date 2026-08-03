@@ -23,7 +23,7 @@ export interface PlacesPort {
  * that as transit would put a fabricated mode in front of the user.
  */
 export type TravelEstimate = {
-  /** One-way travel time in minutes; a positive integer. */
+  /** One-way travel time in whole minutes. Zero means there is no journey. */
   minutes: number;
   /** What the traveller actually does, which may differ from the mode asked for. */
   mode: TravelMode;

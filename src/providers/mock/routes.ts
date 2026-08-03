@@ -35,6 +35,10 @@ export class MockRoutesProvider implements RoutesPort {
     mode: TravelMode,
   ): Promise<TravelEstimate> {
     const distanceKm = haversineDistanceKm(from, to);
+    if (distanceKm === 0) {
+      // Same spot: no journey to model, and rounding one up would invent one.
+      return { minutes: 0, mode, estimated: false };
+    }
     const speedKmPerHour = mode === "walk" ? WALK_KM_PER_HOUR : TRANSIT_KM_PER_HOUR;
     const overheadMinutes = mode === "walk" ? 0 : TRANSIT_OVERHEAD_MINUTES;
     const minutes = (distanceKm / speedKmPerHour) * 60 + overheadMinutes;

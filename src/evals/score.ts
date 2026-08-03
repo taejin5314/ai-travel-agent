@@ -28,6 +28,12 @@ export type Scorecard = {
   mealSlotsFilled: number;
   /** Lunch + dinner for every REQUESTED day, so a dropped day lowers the score. */
   mealSlotsExpected: number;
+  /** Total minutes on foot across the trip. Lower is better. */
+  walkingMinutes: number;
+  /** The single longest walk. A trip is judged by its worst hop, not its average. */
+  longestWalkMinutes: number;
+  /** Legs no routing service measured. Lower is better; it is pure guesswork. */
+  estimatedLegs: number;
 };
 
 /**
@@ -81,6 +87,9 @@ export function scoreItinerary(
   let crossAreaHops = 0;
   let idleMinutes = 0;
   let mealSlotsFilled = 0;
+  let walkingMinutes = 0;
+  let longestWalkMinutes = 0;
+  let estimatedLegs = 0;
 
   for (const day of itinerary.days) {
     let previous: Place | undefined;
@@ -97,6 +106,18 @@ export function scoreItinerary(
       }
       if (previous !== undefined && place !== undefined && place.area !== previous.area) {
         crossAreaHops += 1;
+      }
+      if (activity.travel !== undefined) {
+        if (activity.travel.estimated) {
+          estimatedLegs += 1;
+        }
+        if (activity.travel.mode === "walk") {
+          walkingMinutes += activity.travel.minutes;
+          longestWalkMinutes = Math.max(
+            longestWalkMinutes,
+            activity.travel.minutes,
+          );
+        }
       }
       if (previousEnd !== undefined) {
         const gap =
@@ -123,5 +144,8 @@ export function scoreItinerary(
     mealSlotsExpected:
       tripLengthInDays(preferences.startDate, preferences.endDate) *
       Object.keys(MEAL_WINDOWS).length,
+    walkingMinutes,
+    longestWalkMinutes,
+    estimatedLegs,
   };
 }

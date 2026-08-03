@@ -55,9 +55,10 @@ describe("MockRoutesProvider", () => {
     expect(estimate.minutes).toBeGreaterThan(0);
   });
 
-  it("returns a minimum of 1 minute for the same place", async () => {
+  it("reports zero for the same place rather than rounding a journey up", async () => {
     const provider = new MockRoutesProvider();
     const estimate = await provider.travelMinutes(osakaCastle, osakaCastle, "walk");
-    expect(estimate.minutes).toBe(1);
+    expect(estimate.minutes).toBe(0);
+    expect(estimate.estimated).toBe(false);
   });
 });

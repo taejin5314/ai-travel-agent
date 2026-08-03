@@ -12,7 +12,10 @@
       "crossAreaHops": 0,
       "idleMinutes": 80,
       "mealSlotsFilled": 3,
-      "mealSlotsExpected": 4
+      "mealSlotsExpected": 4,
+      "walkingMinutes": 8,
+      "longestWalkMinutes": 7,
+      "estimatedLegs": 7
     }
   },
   {
@@ -28,7 +31,10 @@
       "crossAreaHops": 1,
       "idleMinutes": 231,
       "mealSlotsFilled": 6,
-      "mealSlotsExpected": 6
+      "mealSlotsExpected": 6,
+      "walkingMinutes": 11,
+      "longestWalkMinutes": 9,
+      "estimatedLegs": 15
     }
   },
   {
@@ -52,7 +58,10 @@
       "crossAreaHops": 0,
       "idleMinutes": 633,
       "mealSlotsFilled": 6,
-      "mealSlotsExpected": 6
+      "mealSlotsExpected": 6,
+      "walkingMinutes": 20,
+      "longestWalkMinutes": 11,
+      "estimatedLegs": 12
     }
   },
   {
@@ -68,7 +77,10 @@
       "crossAreaHops": 0,
       "idleMinutes": 83,
       "mealSlotsFilled": 5,
-      "mealSlotsExpected": 6
+      "mealSlotsExpected": 6,
+      "walkingMinutes": 21,
+      "longestWalkMinutes": 9,
+      "estimatedLegs": 14
     }
   }
 ]

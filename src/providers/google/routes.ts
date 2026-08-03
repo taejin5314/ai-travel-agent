@@ -74,7 +74,9 @@ export class GoogleRoutesProvider implements RoutesPort {
     mode: TravelMode,
   ): Promise<TravelEstimate> {
     if (from.id === to.id) {
-      return { minutes: 1, mode, estimated: true };
+      // Staying put takes no time. The old answer here was a fabricated one
+      // minute, which surfaced as a phantom leg between a place and itself.
+      return { minutes: 0, mode, estimated: false };
     }
     const cacheKey = `${from.id}|${to.id}|${mode}`;
     const cached = this.cache.get(cacheKey);
@@ -123,13 +125,18 @@ export class GoogleRoutesProvider implements RoutesPort {
       // served for the pair; the model is the only answer available, and it
       // is labelled as one.
       estimate = await this.fallback.travelMinutes(from, to, mode);
+    } else if (mode === "transit" && isWalkingOnly(route)) {
+      // A transit question answered entirely with walking steps is not a
+      // transit answer — this key is served the walking route instead. The
+      // measurement is real but it answers a different question, so fall back
+      // to the model and flag it. Reporting the walk here would be honest and
+      // still wrong: the planner would schedule an hour on foot between two
+      // places a train connects in twenty minutes.
+      estimate = await this.fallback.travelMinutes(from, to, mode);
     } else {
       estimate = {
         minutes: Math.max(1, Math.ceil(Number.parseFloat(route.duration) / 60)),
-        // A transit query answered entirely with walking steps IS a walk.
-        // Reporting the requested mode here is what put "🚃 60분" on a
-        // 4.3 km stroll.
-        mode: mode === "transit" && isWalkingOnly(route) ? "walk" : mode,
+        mode,
         estimated: false,
       };
     }
