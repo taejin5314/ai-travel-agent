@@ -170,6 +170,73 @@ describe("scoreItinerary", () => {
     expect(score.days).toBe(1);
   });
 
+  it("totals walking minutes and remembers the worst single walk", () => {
+    // A trip is judged by its worst hop: three gentle strolls and one
+    // hour-long trek must not average out into something acceptable.
+    const score = scoreItinerary(
+      itineraryOf([
+        { placeId: "castle", start: "09:30", end: "10:30" },
+        {
+          placeId: "inari",
+          start: "10:42",
+          end: "11:42",
+          travel: { minutes: 12, mode: "walk" },
+        },
+        {
+          placeId: "ramen",
+          start: "12:00",
+          end: "12:45",
+          travel: { minutes: 18, mode: "walk" },
+        },
+      ]),
+      places,
+      preferences,
+    );
+    expect(score.walkingMinutes).toBe(30);
+    expect(score.longestWalkMinutes).toBe(18);
+  });
+
+  it("does not count transit legs as walking", () => {
+    const score = scoreItinerary(
+      itineraryOf([
+        { placeId: "castle", start: "09:30", end: "10:30" },
+        {
+          placeId: "inari",
+          start: "11:20",
+          end: "12:20",
+          travel: { minutes: 50, mode: "transit", estimated: true },
+        },
+      ]),
+      places,
+      preferences,
+    );
+    expect(score.walkingMinutes).toBe(0);
+    expect(score.longestWalkMinutes).toBe(0);
+  });
+
+  it("counts how many legs nobody measured", () => {
+    const score = scoreItinerary(
+      itineraryOf([
+        { placeId: "castle", start: "09:30", end: "10:30" },
+        {
+          placeId: "inari",
+          start: "10:45",
+          end: "11:45",
+          travel: { minutes: 15, mode: "transit", estimated: true },
+        },
+        {
+          placeId: "ramen",
+          start: "12:00",
+          end: "12:45",
+          travel: { minutes: 10, mode: "walk" },
+        },
+      ]),
+      places,
+      preferences,
+    );
+    expect(score.estimatedLegs).toBe(1);
+  });
+
   it("reports a structural violation the validator catches", () => {
     const score = scoreItinerary(
       itineraryOf([

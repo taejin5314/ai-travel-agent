@@ -83,13 +83,13 @@ describe("GoogleRoutesProvider", () => {
     expect(estimate.estimated).toBe(true);
   });
 
-  it("returns 1 minute for identical places without calling the API", async () => {
+  it("reports no journey at all for identical places, without calling the API", async () => {
     const fetchFn = fakeFetch(999);
     const provider = new GoogleRoutesProvider({ apiKey: "k", fetchFn });
     expect(await provider.travelMinutes(nearA, nearA, "walk")).toEqual({
-      minutes: 1,
+      minutes: 0,
       mode: "walk",
-      estimated: true,
+      estimated: false,
     });
     expect(fetchFn.mock.calls.length).toBe(0);
   });
@@ -111,19 +111,22 @@ describe("GoogleRoutesProvider mode honesty", () => {
     }));
   }
 
-  it("records a transit answer made entirely of walking steps as a walk", async () => {
+  it("does not answer a transit question with an hour-long walk", async () => {
     // Observed live: asking TRANSIT for Osaka Castle → Dotonbori returns the
-    // walking route (59 min / 4.3 km, all 13 steps WALK). Reporting that as
-    // transit put a train icon on a one-hour stroll.
+    // walking route (59 min / 4.3 km, all 13 steps WALK). That measurement is
+    // real but answers a different question, and scheduling it would put a
+    // traveller on foot for an hour between two places a train connects.
     const provider = new GoogleRoutesProvider({
       apiKey: "k",
       fetchFn: fetchRoute(3554, ["WALK", "WALK", "WALK"]),
     });
-    expect(await provider.travelMinutes(nearA, nearB, "transit")).toEqual({
-      minutes: 60,
-      mode: "walk",
-      estimated: false,
-    });
+    const estimate = await provider.travelMinutes(nearA, nearB, "transit");
+    expect(estimate).toEqual(
+      await new MockRoutesProvider().travelMinutes(nearA, nearB, "transit"),
+    );
+    expect(estimate.mode).toBe("transit");
+    expect(estimate.estimated).toBe(true);
+    expect(estimate.minutes).toBeLessThan(60);
   });
 
   it("keeps transit when the route actually contains a ride", async () => {
