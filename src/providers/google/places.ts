@@ -16,6 +16,7 @@ const FIELD_MASK = [
   "rating",
   "userRatingCount",
   "types",
+  "primaryType",
   "regularOpeningHours",
 ];
 
@@ -57,6 +58,12 @@ const CATALOG_QUERIES: Record<PlaceArea, string[]> = {
   ],
 };
 
+/**
+ * Last-resort duration when we know only the broad category. Eight buckets
+ * over ~200 places is too coarse to be right often, which is why
+ * VISIT_MINUTES_BY_TYPE below takes precedence wherever Google names the
+ * place precisely.
+ */
 const VISIT_MINUTES_BY_CATEGORY: Record<Place["category"], number> = {
   sight: 90,
   culture: 75,
@@ -68,8 +75,48 @@ const VISIT_MINUTES_BY_CATEGORY: Record<Place["category"], number> = {
   lodging: 1,
 };
 
+/**
+ * How long a visit actually takes, keyed on Google's specific type. The
+ * category buckets gave 호젠지 — a shrine in a Dotonbori alley you pass
+ * through in a quarter of an hour — the same 75 minutes as Osaka Castle.
+ * Every wrong duration shifts every later stop of the day, so precision here
+ * is worth more than it looks.
+ */
+const VISIT_MINUTES_BY_TYPE: Record<string, number> = {
+  amusement_park: 300,
+  zoo: 180,
+  aquarium: 120,
+  castle: 120,
+  national_park: 120,
+  museum: 90,
+  history_museum: 90,
+  art_gallery: 75,
+  historical_place: 60,
+  historical_landmark: 60,
+  buddhist_temple: 45,
+  shinto_shrine: 30,
+  church: 30,
+  place_of_worship: 45,
+  garden: 45,
+  park: 45,
+  observation_deck: 45,
+  market: 60,
+  food_market: 60,
+  shopping_mall: 75,
+  department_store: 60,
+  plaza: 20,
+  bridge: 15,
+  monument: 20,
+  tourist_attraction: 60,
+};
+
 const CATEGORY_BY_TYPE: readonly [string, Place["category"]][] = [
   ["lodging", "lodging"],
+  ["castle", "sight"],
+  ["observation_deck", "sight"],
+  ["monument", "sight"],
+  ["bridge", "sight"],
+  ["plaza", "sight"],
   ["hotel", "lodging"],
   ["restaurant", "restaurant"],
   ["cafe", "restaurant"],
@@ -122,13 +169,75 @@ function areaOf(lat: number, lng: number): PlaceArea | null {
   return null;
 }
 
-function categoryOf(types: readonly string[]): Place["category"] {
+/**
+ * Types that describe every visitable place equally and therefore decide
+ * nothing. Google sometimes puts one of these in `primaryType` while the
+ * useful word sits in `types` — 구로몬 시장 comes back as primaryType
+ * `tourist_attraction` with `market` behind it — so a generic primary type
+ * must not outrank a specific secondary one.
+ */
+const GENERIC_TYPES = new Set([
+  "tourist_attraction",
+  "point_of_interest",
+  "establishment",
+]);
+
+function decisive(primaryType: string | undefined): string | undefined {
+  return primaryType !== undefined && !GENERIC_TYPES.has(primaryType)
+    ? primaryType
+    : undefined;
+}
+
+/**
+ * `primaryType` is Google's own single answer to "what is this place", and it
+ * wins whenever it says something specific. Reading `types` alone filed Osaka
+ * Castle — primaryType `castle`, but carrying `museum` in its types soup — as
+ * a museum, because `museum` sits above `tourist_attraction` in the fallback
+ * order.
+ */
+function categoryOf(
+  types: readonly string[],
+  primaryType?: string,
+): Place["category"] {
+  const primary = decisive(primaryType);
+  if (primary !== undefined) {
+    const exact = CATEGORY_BY_TYPE.find(([type]) => type === primary);
+    if (exact !== undefined) {
+      return exact[1];
+    }
+  }
   for (const [googleType, category] of CATEGORY_BY_TYPE) {
     if (types.includes(googleType)) {
       return category;
     }
   }
   return "sight";
+}
+
+/**
+ * Most specific signal first: the primary type, then any known type, then the
+ * category bucket. A place Google describes only vaguely still gets a
+ * documented default rather than nothing.
+ */
+function visitMinutesOf(
+  types: readonly string[],
+  primaryType: string | undefined,
+  category: Place["category"],
+): number {
+  const primary = decisive(primaryType);
+  if (primary !== undefined && primary in VISIT_MINUTES_BY_TYPE) {
+    return VISIT_MINUTES_BY_TYPE[primary];
+  }
+  for (const type of types) {
+    if (!GENERIC_TYPES.has(type) && type in VISIT_MINUTES_BY_TYPE) {
+      return VISIT_MINUTES_BY_TYPE[type];
+    }
+  }
+  // Only now does the catch-all get a say, so "some attraction" beats nothing.
+  if (types.some((type) => type in VISIT_MINUTES_BY_TYPE)) {
+    return VISIT_MINUTES_BY_TYPE.tourist_attraction;
+  }
+  return VISIT_MINUTES_BY_CATEGORY[category];
 }
 
 function pad(value: number): string {
@@ -200,7 +309,8 @@ export class GooglePlacesProvider implements PlacesPort {
     if (area === null) {
       return null; // outside Osaka/Kyoto — not supported yet
     }
-    const category = categoryOf(googlePlace.types ?? []);
+    const types = googlePlace.types ?? [];
+    const category = categoryOf(types, googlePlace.primaryType);
     const candidate = {
       id: googlePlace.id,
       name: googlePlace.displayName.text,
@@ -211,7 +321,11 @@ export class GooglePlacesProvider implements PlacesPort {
         lng: googlePlace.location.longitude,
       },
       openingHours: toOpeningHours(googlePlace),
-      typicalVisitMinutes: VISIT_MINUTES_BY_CATEGORY[category],
+      typicalVisitMinutes: visitMinutesOf(
+        types,
+        googlePlace.primaryType,
+        category,
+      ),
       rating: googlePlace.rating,
       reviewCount: googlePlace.userRatingCount,
     };

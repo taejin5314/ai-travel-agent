@@ -25,6 +25,8 @@ export const GooglePlaceSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   userRatingCount: z.number().int().nonnegative().optional(),
   types: z.array(z.string()).optional(),
+  /** Google's single best guess at what this place IS — more reliable than the types soup. */
+  primaryType: z.string().optional(),
   regularOpeningHours: z
     .object({
       periods: z
