@@ -60,12 +60,32 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                         {item.travel.estimated && (
                           <span className="ml-1 text-zinc-400">(추정)</span>
                         )}
+                        {item.directionsUrl !== undefined && (
+                          // Google Maps has Japanese rail with live times and
+                          // platform numbers; its routing API does not. Hand
+                          // the leg over rather than approximate it here.
+                          <a
+                            href={item.directionsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-1.5 underline underline-offset-2"
+                          >
+                            길찾기
+                          </a>
+                        )}
                       </p>
                     )}
                     <div className="flex justify-between gap-4">
                       <span>
                         {item.kind === "meal" ? "🍽️ " : ""}
-                        {item.placeName}
+                        <a
+                          href={item.placeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline decoration-dotted underline-offset-2"
+                        >
+                          {item.placeName}
+                        </a>
                         {item.rating !== undefined && (
                           <span className="ml-1 text-xs text-zinc-500">
                             ★ {item.rating.toFixed(1)}

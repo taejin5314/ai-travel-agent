@@ -4,6 +4,7 @@ import type { Itinerary } from "@/domain/schema/itinerary";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
+import { directionsUrl, placeUrl } from "@/lib/googleMaps";
 
 // Mirrors the bounds enforced by validateTripPreferences (src/validators/tripPreferences.ts).
 // Kept as literals so this shared client/server module never imports from validators/.
@@ -71,8 +72,21 @@ export type ItineraryViewDay = {
     rating?: number;
     /** Hop taken to reach this stop; absent on the first stop of a day. */
     travel?: TravelLeg;
+    /** The stop on Google Maps. */
+    placeUrl: string;
+    /**
+     * Google Maps directions for the hop that reaches this stop. Absent on
+     * the first stop of a day, and whenever the place is unknown.
+     */
+    directionsUrl?: string;
   }[];
 };
+
+/**
+ * A stop the catalog no longer knows about still needs a working link, and
+ * a search for its id is more useful than a dead anchor.
+ */
+const UNKNOWN_PLACE_URL = "https://www.google.com/maps";
 
 /**
  * Resolves an itinerary's place ids to the names, ratings and legs the summary
@@ -87,8 +101,12 @@ export function buildItineraryView(
   const placeById = new Map(places.map((p) => [p.id, p]));
   return itinerary.days.map((day) => ({
     date: day.date,
-    items: day.activities.map((activity) => {
+    items: day.activities.map((activity, index) => {
       const place = placeById.get(activity.placeId);
+      // The hop is FROM the previous stop of the same day. Links are built
+      // here, server-side, where the resolved Place objects live — the view
+      // stays a dumb renderer and never touches the catalog.
+      const previous = placeById.get(day.activities[index - 1]?.placeId ?? "");
       return {
         placeName: place?.name ?? activity.placeId,
         start: activity.start,
@@ -96,6 +114,15 @@ export function buildItineraryView(
         kind: place?.category === "restaurant" ? ("meal" as const) : ("visit" as const),
         rating: place?.rating,
         travel: activity.travel,
+        placeUrl: place === undefined ? UNKNOWN_PLACE_URL : placeUrl(place),
+        ...(place !== undefined &&
+          previous !== undefined && {
+            directionsUrl: directionsUrl(
+              previous,
+              place,
+              activity.travel?.mode ?? "transit",
+            ),
+          }),
       };
     }),
   }));
