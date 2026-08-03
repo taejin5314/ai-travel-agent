@@ -259,7 +259,8 @@ describe("GooglePlacesProvider typing and durations", () => {
   });
 
   it("falls back to types when primaryType is absent", async () => {
-    const { primaryType: _omitted, ...withoutPrimary } = osakaCastle;
+    const withoutPrimary: Record<string, unknown> = { ...osakaCastle };
+    delete withoutPrimary.primaryType;
     const castle = await place(withoutPrimary);
     // `castle` is still in types, so the type table still finds it.
     expect(castle.typicalVisitMinutes).toBe(120);
