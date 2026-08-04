@@ -68,11 +68,17 @@ describe("PlaceSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects an invalid area enum value", () => {
-    const result = PlaceSchema.safeParse({
-      ...validPlace,
-      area: "tokyo",
-    });
+  it("accepts any destination id, because the set of destinations is data", () => {
+    // `area` used to be a two-value enum, which meant opening a new city
+    // required a schema change. Whether an id is REGISTERED is checked at the
+    // provider boundary — src/providers/google/places.test.ts proves a place
+    // outside every destination is dropped rather than imported.
+    const result = PlaceSchema.safeParse({ ...validPlace, area: "paris" });
+    expect(result.success).toBe(true);
+  });
+
+  it("still rejects a blank area", () => {
+    const result = PlaceSchema.safeParse({ ...validPlace, area: "" });
     expect(result.success).toBe(false);
   });
 

@@ -1,10 +1,11 @@
-import type { z } from "zod";
-import type { Place, PlaceAreaSchema } from "@/domain/schema/place";
+import type { DestinationId } from "@/domain/destination";
+import type { Place } from "@/domain/schema/place";
 import type { Cuisine } from "@/domain/schema/cuisine";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import type { TransitRide, TravelMode } from "@/domain/schema/travel";
 
-export type PlaceArea = z.infer<typeof PlaceAreaSchema>;
+// Kept as a name because it reads well at call sites; it is a destination id.
+export type PlaceArea = DestinationId;
 // Re-exported, not declared here: an Activity records the mode of the hop that
 // reached it, so the union belongs in domain. Providers may depend on domain,
 // never the reverse.

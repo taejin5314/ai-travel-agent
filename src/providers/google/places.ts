@@ -1,3 +1,10 @@
+import {
+  allDestinations,
+  destinationAt,
+  findDestination,
+  registryBounds,
+  type Destination,
+} from "@/domain/destination";
 import type { Cuisine } from "@/domain/schema/cuisine";
 import { PlaceSchema, type Place } from "@/domain/schema/place";
 import type { PlaceArea, PlacesPort } from "@/providers/ports";
@@ -23,19 +30,16 @@ const FIELD_MASK = [
   "regularOpeningHours",
 ];
 
-/** Kansai bounding boxes; results outside both areas are dropped. */
-const AREA_BOUNDS: Record<PlaceArea, { lat: [number, number]; lng: [number, number] }> = {
-  osaka: { lat: [34.3, 34.85], lng: [135.25, 135.75] },
-  kyoto: { lat: [34.85, 35.2], lng: [135.55, 135.95] },
-};
-
-/** Location bias covering both Osaka and Kyoto for text searches. */
-const KANSAI_BIAS = {
-  rectangle: {
-    low: { latitude: 34.3, longitude: 135.25 },
-    high: { latitude: 35.2, longitude: 135.95 },
-  },
-};
+/** Search bias covering every registered destination. */
+function searchBias() {
+  const bounds = registryBounds();
+  return {
+    rectangle: {
+      low: { latitude: bounds.lat[0], longitude: bounds.lng[0] },
+      high: { latitude: bounds.lat[1], longitude: bounds.lng[1] },
+    },
+  };
+}
 
 /**
  * A single "best restaurants" query returns a narrow, tourist-facing slice
@@ -44,22 +48,19 @@ const KANSAI_BIAS = {
  * for the confidence-weighted ranking to have real choices. Each entry is
  * one billed request per area, cached for the process lifetime.
  */
-const CATALOG_QUERIES: Record<PlaceArea, string[]> = {
-  osaka: [
-    "top tourist attractions in Osaka Japan",
-    "popular local restaurants in Osaka Japan",
-    "famous ramen restaurants in Osaka",
-    "okonomiyaki and takoyaki restaurants in Osaka",
-    "hotels in Osaka Japan",
-  ],
-  kyoto: [
-    "top tourist attractions in Kyoto Japan",
-    "popular local restaurants in Kyoto Japan",
-    "traditional kaiseki and soba restaurants in Kyoto",
-    "famous ramen restaurants in Kyoto",
-    "hotels in Kyoto Japan",
-  ],
-};
+const CATALOG_QUERY_TEMPLATES = [
+  "top tourist attractions in {city}",
+  "popular local restaurants in {city}",
+  "best local food in {city}",
+  "famous landmarks and museums in {city}",
+  "hotels in {city}",
+] as const;
+
+function catalogQueries(destination: Destination): string[] {
+  return CATALOG_QUERY_TEMPLATES.map((template) =>
+    template.replace("{city}", destination.searchName),
+  );
+}
 
 /**
  * Last-resort duration when we know only the broad category. Eight buckets
@@ -79,23 +80,18 @@ const VISIT_MINUTES_BY_CATEGORY: Record<Place["category"], number> = {
 };
 
 /**
- * Search phrases per cuisine, `{area}` filled in per city. Phrases rather
+ * Search phrases per cuisine, `{city}` filled in per destination. Phrases rather
  * than Google place types because the type vocabulary has no word for
  * okonomiyaki or kaiseki — a text search finds what a type filter cannot.
  */
 const CUISINE_QUERIES: Record<Cuisine, string> = {
-  ramen: "famous ramen restaurants in {area} Japan",
-  sushi: "best sushi restaurants in {area} Japan",
-  okonomiyaki: "okonomiyaki and takoyaki restaurants in {area} Japan",
-  "udon-soba": "udon and soba restaurants in {area} Japan",
-  yakiniku: "yakiniku and wagyu restaurants in {area} Japan",
-  kaiseki: "traditional kaiseki restaurants in {area} Japan",
-  cafe: "popular cafes and dessert shops in {area} Japan",
-};
-
-const AREA_NAMES: Record<PlaceArea, string> = {
-  osaka: "Osaka",
-  kyoto: "Kyoto",
+  ramen: "famous ramen restaurants in {city}",
+  sushi: "best sushi restaurants in {city}",
+  okonomiyaki: "okonomiyaki and takoyaki restaurants in {city}",
+  "udon-soba": "udon and soba restaurants in {city}",
+  yakiniku: "yakiniku and wagyu restaurants in {city}",
+  kaiseki: "traditional kaiseki restaurants in {city}",
+  cafe: "popular cafes and dessert shops in {city}",
 };
 
 /**
@@ -175,22 +171,7 @@ export interface GooglePlacesProviderOptions {
   languageCode?: string;
 }
 
-function areaOf(lat: number, lng: number): PlaceArea | null {
-  for (const [area, bounds] of Object.entries(AREA_BOUNDS) as [
-    PlaceArea,
-    (typeof AREA_BOUNDS)[PlaceArea],
-  ][]) {
-    if (
-      lat >= bounds.lat[0] &&
-      lat <= bounds.lat[1] &&
-      lng >= bounds.lng[0] &&
-      lng <= bounds.lng[1]
-    ) {
-      return area;
-    }
-  }
-  return null;
-}
+
 
 /**
  * Types that describe every visitable place equally and therefore decide
@@ -364,19 +345,21 @@ export class GooglePlacesProvider implements PlacesPort {
   }
 
   private toDomainPlace(googlePlace: GooglePlace): Place | null {
-    const area = areaOf(
+    const destination = destinationAt(
       googlePlace.location.latitude,
       googlePlace.location.longitude,
     );
-    if (area === null) {
-      return null; // outside Osaka/Kyoto — not supported yet
+    if (destination === undefined) {
+      // Outside every registered destination. Dropping it here is what keeps
+      // a search for "Osaka Castle" from returning a namesake in Texas.
+      return null;
     }
     const types = googlePlace.types ?? [];
     const category = categoryOf(types, googlePlace.primaryType);
     const candidate = {
       id: googlePlace.id,
       name: googlePlace.displayName.text,
-      area,
+      area: destination.id,
       category,
       location: {
         lat: googlePlace.location.latitude,
@@ -411,7 +394,7 @@ export class GooglePlacesProvider implements PlacesPort {
       body: JSON.stringify({
         textQuery,
         languageCode: this.languageCode,
-        locationBias: KANSAI_BIAS,
+        locationBias: searchBias(),
       }),
     });
     if (!response.ok) {
@@ -433,8 +416,14 @@ export class GooglePlacesProvider implements PlacesPort {
     if (cached !== undefined) {
       return cached;
     }
+    const destination = findDestination(area);
+    if (destination === undefined) {
+      // An unregistered destination has no queries to run and no bounds to
+      // filter by. Returning nothing beats searching the whole world.
+      return [];
+    }
     const results = await Promise.all(
-      CATALOG_QUERIES[area].map((query) => this.searchText(query)),
+      catalogQueries(destination).map((query) => this.searchText(query)),
     );
     const byId = new Map<string, Place>();
     for (const place of results.flat()) {
@@ -451,11 +440,10 @@ export class GooglePlacesProvider implements PlacesPort {
     if (area !== undefined) {
       return [...(await this.catalogFor(area))];
     }
-    const [osaka, kyoto] = await Promise.all([
-      this.catalogFor("osaka"),
-      this.catalogFor("kyoto"),
-    ]);
-    return [...osaka, ...kyoto];
+    const catalogs = await Promise.all(
+      allDestinations().map((destination) => this.catalogFor(destination.id)),
+    );
+    return catalogs.flat();
   }
 
   async findRestaurants(
@@ -465,9 +453,15 @@ export class GooglePlacesProvider implements PlacesPort {
     if (cuisines.length === 0) {
       return [];
     }
-    const areas: PlaceArea[] = area !== undefined ? [area] : ["osaka", "kyoto"];
+    const areas: PlaceArea[] =
+      area !== undefined ? [area] : allDestinations().map((d) => d.id);
     const queries = cuisines.flatMap((cuisine) =>
-      areas.map((a) => CUISINE_QUERIES[cuisine].replace("{area}", AREA_NAMES[a])),
+      areas.map((a) =>
+        CUISINE_QUERIES[cuisine].replace(
+          "{city}",
+          findDestination(a)?.searchName ?? a,
+        ),
+      ),
     );
     const results = await Promise.all(
       queries.map((query) => this.searchText(query)),
