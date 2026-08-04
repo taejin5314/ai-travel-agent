@@ -126,7 +126,7 @@ describe("extractFormValues", () => {
         ...validFields,
         mustVisit: " Osaka Castle ,\nDotonbori,, ",
         cuisines: [],
-      constraints: ["late-start"],
+        constraints: ["late-start"],
       }),
     );
 

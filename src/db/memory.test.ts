@@ -9,7 +9,7 @@ const plan: NewPlan = {
     endDate: "2026-10-07",
     lodging: { name: "Cross Hotel Osaka", area: "Namba" },
     destinations: ["osaka", "kyoto"],
-  partySize: 2,
+    partySize: 2,
     mustVisit: ["오사카성"],
     interests: ["음식"],
     pace: "balanced",

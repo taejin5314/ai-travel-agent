@@ -119,6 +119,39 @@ export function constraintLabel(constraint: TripConstraint): string {
   return CONSTRAINT_LABELS.get(constraint) ?? constraint;
 }
 
+/**
+ * A place the traveller can choose on the picker. Presentation-only: enough
+ * to draw a pin and decide, and nothing more.
+ */
+export type CandidateView = {
+  id: string;
+  name: string;
+  category: Place["category"];
+  destination: string;
+  location: { lat: number; lng: number };
+  rating?: number;
+  reviewCount?: number;
+  priceRange?: Place["priceRange"];
+  placeUrl: string;
+  /** Roughly how long a visit takes, so a day can be judged before planning. */
+  visitMinutes: number;
+};
+
+export function toCandidateView(place: Place): CandidateView {
+  return {
+    id: place.id,
+    name: place.name,
+    category: place.category,
+    destination: place.area,
+    location: place.location,
+    ...(place.rating !== undefined && { rating: place.rating }),
+    ...(place.reviewCount !== undefined && { reviewCount: place.reviewCount }),
+    ...(place.priceRange !== undefined && { priceRange: place.priceRange }),
+    placeUrl: placeUrl(place),
+    visitMinutes: place.typicalVisitMinutes,
+  };
+}
+
 /** Presentation-only view of a generated itinerary (place ids resolved to names). */
 export type ItineraryViewDay = {
   date: string;
