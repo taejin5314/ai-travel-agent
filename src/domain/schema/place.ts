@@ -32,6 +32,28 @@ const OpeningHoursSchema = z.tuple([
   OpeningHoursEntrySchema,
 ]);
 
+/**
+ * What one person typically spends here, as the data source reports it.
+ *
+ * Both bounds are optional because real data is often half-open: Google gives
+ * kaiseki restaurants a start price of ¥10,000 and no ceiling. A missing bound
+ * is left missing rather than filled in — an invented upper bound would turn
+ * "from ¥10,000" into a budget the traveller could hold us to.
+ */
+export const PriceRangeSchema = z
+  .object({
+    /** ISO 4217, e.g. "JPY". */
+    currency: z.string().length(3),
+    min: z.number().nonnegative().optional(),
+    max: z.number().nonnegative().optional(),
+  })
+  .refine((range) => range.min !== undefined || range.max !== undefined, {
+    message: "A price range with neither bound carries no information",
+  })
+  .refine((range) => range.min === undefined || range.max === undefined || range.min <= range.max, {
+    message: "min must not exceed max",
+  });
+
 export const PlaceSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -48,6 +70,9 @@ export const PlaceSchema = z.object({
   /** Average review score, 0-5. Optional until every data source provides it. */
   rating: z.number().min(0).max(5).optional(),
   reviewCount: z.number().int().nonnegative().optional(),
+  /** Typical spend per person. Absent when the source has no price data. */
+  priceRange: PriceRangeSchema.optional(),
 });
 
+export type PriceRange = z.infer<typeof PriceRangeSchema>;
 export type Place = z.infer<typeof PlaceSchema>;

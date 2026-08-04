@@ -18,6 +18,8 @@ const FIELD_MASK = [
   "userRatingCount",
   "types",
   "primaryType",
+  "priceLevel",
+  "priceRange",
   "regularOpeningHours",
 ];
 
@@ -261,6 +263,45 @@ function visitMinutesOf(
   return VISIT_MINUTES_BY_CATEGORY[category];
 }
 
+/**
+ * Rough per-person spend for Google's price buckets, in yen. Only consulted
+ * when `priceRange` is absent — the buckets are a band, not a figure, and
+ * treating them as one would dress a guess up as data. Both bounds come from
+ * the bucket definition, so nothing here is invented beyond the band itself.
+ */
+const YEN_BY_PRICE_LEVEL: Record<string, { min: number; max?: number }> = {
+  PRICE_LEVEL_FREE: { min: 0, max: 0 },
+  PRICE_LEVEL_INEXPENSIVE: { min: 0, max: 1000 },
+  PRICE_LEVEL_MODERATE: { min: 1000, max: 3000 },
+  PRICE_LEVEL_EXPENSIVE: { min: 3000, max: 10000 },
+  PRICE_LEVEL_VERY_EXPENSIVE: { min: 10000 },
+};
+
+function priceRangeOf(place: GooglePlace): Place["priceRange"] {
+  const range = place.priceRange;
+  const currency =
+    range?.startPrice?.currencyCode ?? range?.endPrice?.currencyCode;
+  if (range !== undefined && currency !== undefined) {
+    const min = Number(range.startPrice?.units);
+    const max = Number(range.endPrice?.units);
+    const parsed = {
+      currency,
+      ...(Number.isFinite(min) && { min }),
+      ...(Number.isFinite(max) && { max }),
+    };
+    // Half-open is normal here: kaiseki comes back as "from ¥10,000" with no
+    // ceiling. Only a range with neither bound is useless.
+    if ("min" in parsed || "max" in parsed) {
+      return parsed;
+    }
+  }
+  const bucket =
+    place.priceLevel === undefined
+      ? undefined
+      : YEN_BY_PRICE_LEVEL[place.priceLevel];
+  return bucket === undefined ? undefined : { currency: "JPY", ...bucket };
+}
+
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
@@ -349,6 +390,7 @@ export class GooglePlacesProvider implements PlacesPort {
       ),
       rating: googlePlace.rating,
       reviewCount: googlePlace.userRatingCount,
+      priceRange: priceRangeOf(googlePlace),
     };
     const parsed = PlaceSchema.safeParse(candidate);
     if (!parsed.success) {
