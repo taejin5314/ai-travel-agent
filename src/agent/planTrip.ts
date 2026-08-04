@@ -257,6 +257,16 @@ export async function planTrip(
       mustVisitPlaces.push(resolved);
     }
   }
+  // Picked on the map: same guarantee as a must-visit, but resolved by id,
+  // so there is no name to mis-resolve.
+  for (const id of preferences.selectedPlaceIds ?? []) {
+    const resolved = await ports.places.getPlaceById(id);
+    if (resolved === null) {
+      missingMustVisits.push(id);
+    } else if (!mustVisitPlaces.some((p) => p.id === resolved.id)) {
+      mustVisitPlaces.push(resolved);
+    }
+  }
   if (missingMustVisits.length > 0) {
     return {
       ok: false,
