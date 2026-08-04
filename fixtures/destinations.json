@@ -4,63 +4,139 @@
     "name": "오사카",
     "searchName": "Osaka, Japan",
     "country": "JP",
-    "bounds": {
-      "lat": [
-        34.3,
-        34.85
-      ],
-      "lng": [
-        135.25,
-        135.75
-      ]
-    }
+    "bounds": { "lat": [34.3, 34.85], "lng": [135.25, 135.75] },
+    "cuisines": [
+      {
+        "id": "okonomiyaki",
+        "label": "오코노미야키·타코야키",
+        "query": "okonomiyaki and takoyaki restaurants in {city}"
+      },
+      { "id": "ramen", "label": "라멘", "query": "famous ramen restaurants in {city}" },
+      { "id": "sushi", "label": "스시", "query": "best sushi restaurants in {city}" },
+      {
+        "id": "yakiniku",
+        "label": "야키니쿠·와규",
+        "query": "yakiniku and wagyu restaurants in {city}"
+      },
+      {
+        "id": "udon-soba",
+        "label": "우동·소바",
+        "query": "udon and soba restaurants in {city}"
+      },
+      {
+        "id": "cafe",
+        "label": "카페·디저트",
+        "query": "popular cafes and dessert shops in {city}"
+      }
+    ]
   },
   {
     "id": "kyoto",
     "name": "교토",
     "searchName": "Kyoto, Japan",
     "country": "JP",
-    "bounds": {
-      "lat": [
-        34.85,
-        35.2
-      ],
-      "lng": [
-        135.55,
-        135.95
-      ]
-    }
+    "bounds": { "lat": [34.85, 35.2], "lng": [135.55, 135.95] },
+    "cuisines": [
+      {
+        "id": "kaiseki",
+        "label": "가이세키",
+        "query": "traditional kaiseki restaurants in {city}"
+      },
+      {
+        "id": "udon-soba",
+        "label": "우동·소바",
+        "query": "udon and soba restaurants in {city}"
+      },
+      {
+        "id": "tofu",
+        "label": "두부 요리",
+        "query": "yudofu and tofu kaiseki restaurants in {city}"
+      },
+      {
+        "id": "matcha",
+        "label": "말차 디저트",
+        "query": "matcha dessert cafes in {city}"
+      },
+      { "id": "ramen", "label": "라멘", "query": "famous ramen restaurants in {city}" },
+      {
+        "id": "cafe",
+        "label": "카페·디저트",
+        "query": "popular cafes and dessert shops in {city}"
+      }
+    ]
   },
   {
     "id": "seoul",
     "name": "서울",
     "searchName": "Seoul, South Korea",
     "country": "KR",
-    "bounds": {
-      "lat": [
-        37.42,
-        37.7
-      ],
-      "lng": [
-        126.76,
-        127.18
-      ]
-    }
+    "bounds": { "lat": [37.42, 37.7], "lng": [126.76, 127.18] },
+    "cuisines": [
+      {
+        "id": "hansik",
+        "label": "한정식·백반",
+        "query": "traditional Korean hansik restaurants in {city}"
+      },
+      {
+        "id": "gogi",
+        "label": "고기구이",
+        "query": "Korean barbecue and grilled pork restaurants in {city}"
+      },
+      {
+        "id": "chicken",
+        "label": "치킨",
+        "query": "famous Korean fried chicken restaurants in {city}"
+      },
+      {
+        "id": "bunsik",
+        "label": "분식",
+        "query": "tteokbokki and street food restaurants in {city}"
+      },
+      {
+        "id": "noodles",
+        "label": "국수·냉면",
+        "query": "naengmyeon and kalguksu noodle restaurants in {city}"
+      },
+      {
+        "id": "cafe",
+        "label": "카페·디저트",
+        "query": "popular cafes and dessert shops in {city}"
+      }
+    ]
   },
   {
     "id": "paris",
     "name": "파리",
     "searchName": "Paris, France",
     "country": "FR",
-    "bounds": {
-      "lat": [
-        48.8,
-        48.92
-      ],
-      "lng": [
-        2.22,
-        2.47
-      ]
-    }
+    "bounds": { "lat": [48.8, 48.92], "lng": [2.22, 2.47] },
+    "cuisines": [
+      {
+        "id": "bistro",
+        "label": "비스트로",
+        "query": "traditional French bistros in {city}"
+      },
+      {
+        "id": "boulangerie",
+        "label": "베이커리·페이스트리",
+        "query": "best boulangerie and patisserie in {city}"
+      },
+      { "id": "creperie", "label": "크레페", "query": "creperies in {city}" },
+      {
+        "id": "brasserie",
+        "label": "브라스리·해산물",
+        "query": "brasserie and seafood restaurants in {city}"
+      },
+      {
+        "id": "fine-dining",
+        "label": "파인다이닝",
+        "query": "michelin starred restaurants in {city}"
+      },
+      {
+        "id": "cafe",
+        "label": "카페·디저트",
+        "query": "popular cafes and dessert shops in {city}"
+      }
+    ]
   }
 ]

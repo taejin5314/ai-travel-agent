@@ -3,8 +3,8 @@ import {
   hasMeasuredTransit,
   serviceableDestinations,
 } from "@/domain/coverage";
+import { cuisineOptionsFor } from "@/domain/destination";
 import type { TripConstraint } from "@/domain/schema/constraint";
-import type { Cuisine } from "@/domain/schema/cuisine";
 import type { Itinerary } from "@/domain/schema/itinerary";
 import { estimateCost, type CostEstimate } from "@/domain/cost";
 import type { Place } from "@/domain/schema/place";
@@ -88,25 +88,27 @@ export function destinationLabel(id: string): string {
 }
 
 /**
- * The cuisines the form offers. Every entry drives a real catalog search in
- * the places provider — nothing here is decoration.
+ * The cuisines on offer for the destinations currently chosen. Empty until
+ * one is chosen, because "what is worth eating" has no answer before then.
  */
-export const CUISINE_OPTIONS: readonly { value: Cuisine; label: string }[] = [
-  { value: "ramen", label: "라멘" },
-  { value: "sushi", label: "스시" },
-  { value: "okonomiyaki", label: "오코노미야키·타코야키" },
-  { value: "udon-soba", label: "우동·소바" },
-  { value: "yakiniku", label: "야키니쿠·와규" },
-  { value: "kaiseki", label: "가이세키·정식" },
-  { value: "cafe", label: "카페·디저트" },
-];
+export function cuisineOptions(
+  destinationIds: readonly string[],
+): { value: string; label: string }[] {
+  return cuisineOptionsFor(destinationIds).map((cuisine) => ({
+    value: cuisine.id,
+    label: cuisine.label,
+  }));
+}
 
-const CUISINE_LABELS = new Map(
-  CUISINE_OPTIONS.map((option) => [option.value, option.label]),
+const ALL_CUISINE_LABELS = new Map(
+  cuisineOptionsFor(serviceableDestinations().map((d) => d.id)).map((c) => [
+    c.id,
+    c.label,
+  ]),
 );
 
-export function cuisineLabel(cuisine: Cuisine): string {
-  return CUISINE_LABELS.get(cuisine) ?? cuisine;
+export function cuisineLabel(cuisine: string): string {
+  return ALL_CUISINE_LABELS.get(cuisine) ?? cuisine;
 }
 
 const CONSTRAINT_LABELS = new Map(
@@ -320,6 +322,9 @@ export function translateValidationErrors(errors: string[]): string[] {
     );
     if (duplicateMatch) {
       return `필수 방문지에 중복된 항목이 있습니다: ${duplicateMatch[1]}`;
+    }
+    if (message.startsWith("Cuisines not offered")) {
+      return "선택하신 음식은 해당 여행 지역에서 제공되지 않습니다.";
     }
     if (message.startsWith("Unavailable destinations")) {
       return "선택하신 여행 지역은 아직 지원하지 않습니다.";

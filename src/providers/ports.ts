@@ -1,6 +1,5 @@
 import type { DestinationId } from "@/domain/destination";
 import type { Place } from "@/domain/schema/place";
-import type { Cuisine } from "@/domain/schema/cuisine";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import type { TransitRide, TravelMode } from "@/domain/schema/travel";
 
@@ -22,7 +21,7 @@ export interface PlacesPort {
    * business, not the provider's.
    */
   findRestaurants(
-    cuisines: readonly Cuisine[],
+    cuisines: readonly string[],
     area?: PlaceArea,
   ): Promise<Place[]>;
 }

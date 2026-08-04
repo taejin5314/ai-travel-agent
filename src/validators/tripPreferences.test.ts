@@ -111,3 +111,39 @@ describe("validateTripPreferences destinations", () => {
     }
   });
 });
+
+describe("validateTripPreferences cuisines", () => {
+  const base = {
+    startDate: "2026-10-06",
+    endDate: "2026-10-07",
+    lodging: { name: "Hotel", area: "Namba" },
+    partySize: 2,
+    mustVisit: [],
+    interests: [],
+    pace: "balanced" as const,
+  };
+
+  it("accepts a cuisine the chosen destination offers", () => {
+    expect(
+      validateTripPreferences({
+        ...base,
+        destinations: ["kyoto"],
+        cuisines: ["kaiseki"],
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it("rejects a cuisine no chosen destination offers", () => {
+    // Offered-and-ignored is the failure mode this prevents: a Paris trip
+    // asking for kaiseki used to be accepted and then quietly do nothing.
+    const result = validateTripPreferences({
+      ...base,
+      destinations: ["paris"],
+      cuisines: ["kaiseki"],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.includes("kaiseki"))).toBe(true);
+    }
+  });
+});

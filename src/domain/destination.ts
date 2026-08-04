@@ -10,6 +10,27 @@ import destinationsFixture from "../../fixtures/destinations.json";
  * editing four files, and coordinates outside Kansai were silently discarded.
  * Opening a new destination is now an entry in `fixtures/destinations.json`.
  */
+/**
+ * A kind of food worth offering in one destination.
+ *
+ * Per destination rather than a global enum: the enum was written when the
+ * app served only Kansai, so a Paris traveller was offered 오코노미야키 and
+ * the search ran "okonomiyaki restaurants in Paris, France". What is worth
+ * eating is a property of the place, so it lives with the place.
+ *
+ * Every entry still has to change what the planner does (the §32 rule) —
+ * `query` is a real catalog search, not a label.
+ */
+export const DestinationCuisineSchema = z.object({
+  /** Stable id; shared ids across destinations are fine and intended ("cafe"). */
+  id: z.string().min(1),
+  label: z.string().min(1),
+  /** Search phrase; `{city}` is replaced with the destination's searchName. */
+  query: z.string().min(1),
+});
+
+export type DestinationCuisine = z.infer<typeof DestinationCuisineSchema>;
+
 export const DestinationSchema = z.object({
   /** Stable id; appears in saved plans, so it must not be renamed casually. */
   id: z.string().min(1),
@@ -23,6 +44,8 @@ export const DestinationSchema = z.object({
   searchName: z.string().min(1),
   /** ISO 3166-1 alpha-2, for grouping and for coverage reporting. */
   country: z.string().length(2),
+  /** What is worth eating here, in display order. */
+  cuisines: z.array(DestinationCuisineSchema).default([]),
   /** Results outside this box are not part of this destination. */
   bounds: z.object({
     lat: z.tuple([z.number().min(-90).max(90), z.number().min(-90).max(90)]),
@@ -67,6 +90,37 @@ export function destinationAt(
       lng >= entry.bounds.lng[0] &&
       lng <= entry.bounds.lng[1],
   );
+}
+
+/**
+ * The cuisines on offer for a set of destinations, de-duplicated by id and
+ * in registry order. A traveller doing Osaka and Kyoto sees 라멘 once, not
+ * twice; the per-destination query still runs separately for each.
+ */
+export function cuisineOptionsFor(
+  ids: readonly DestinationId[],
+): DestinationCuisine[] {
+  const byId = new Map<string, DestinationCuisine>();
+  for (const id of ids) {
+    for (const cuisine of findDestination(id)?.cuisines ?? []) {
+      if (!byId.has(cuisine.id)) {
+        byId.set(cuisine.id, cuisine);
+      }
+    }
+  }
+  return [...byId.values()];
+}
+
+/** The search phrase for one cuisine in one destination, if it offers it. */
+export function cuisineQueryFor(
+  destinationId: DestinationId,
+  cuisineId: string,
+): string | undefined {
+  const destination = findDestination(destinationId);
+  const cuisine = destination?.cuisines.find((entry) => entry.id === cuisineId);
+  return cuisine === undefined
+    ? undefined
+    : cuisine.query.replace("{city}", destination!.searchName);
 }
 
 /** The box covering every destination, for biasing a text search. */

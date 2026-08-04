@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { submitTripPreferences } from "./actions";
 import {
   CONSTRAINT_OPTIONS,
-  CUISINE_OPTIONS,
+  cuisineOptions,
   DESTINATION_OPTIONS,
   initialPlanFormState,
 } from "./formPreferences";
@@ -26,6 +26,10 @@ export function PlanForm() {
     submitTripPreferences,
     initialPlanFormState,
   );
+
+  // The cuisine list depends on the destinations picked, so the choice has
+  // to be observed here rather than read from FormData at submit time.
+  const [chosenDestinations, setChosenDestinations] = useState<string[]>([]);
 
   if (state.status === "success") {
     return (
@@ -56,6 +60,13 @@ export function PlanForm() {
                 name="destinations"
                 value={option.value}
                 defaultChecked={values?.destinations.includes(option.value)}
+                onChange={(event) =>
+                  setChosenDestinations((current) =>
+                    event.target.checked
+                      ? [...current, option.value]
+                      : current.filter((id) => id !== option.value),
+                  )
+                }
                 className="sr-only"
               />
               {option.label}
@@ -176,8 +187,15 @@ export function PlanForm() {
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className={labelClassName}>먹고 싶은 음식 (선택)</legend>
+        {chosenDestinations.length === 0 ? (
+          // What is worth eating depends on where you are going, so there is
+          // nothing honest to offer before a destination is chosen.
+          <p className="text-sm text-zinc-500">
+            여행 지역을 먼저 선택하면 그 지역의 음식을 보여드립니다.
+          </p>
+        ) : (
         <div className="flex flex-wrap gap-2">
-          {CUISINE_OPTIONS.map((option) => (
+          {cuisineOptions(chosenDestinations).map((option) => (
             <label
               key={option.value}
               className="flex cursor-pointer items-center rounded-full border border-black/10 px-3 py-1.5 text-sm has-[:checked]:border-foreground has-[:checked]:bg-foreground has-[:checked]:text-background dark:border-white/15"
@@ -193,6 +211,7 @@ export function PlanForm() {
             </label>
           ))}
         </div>
+        )}
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
