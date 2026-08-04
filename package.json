@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
-    "eval": "tsx scripts/run-scenario.ts"
+    "eval": "tsx scripts/run-scenario.ts",
+    "probe": "tsx --env-file=.env.local scripts/probe-coverage.ts"
   },
   "engines": {
     "node": ">=20.9.0"

@@ -47,8 +47,8 @@ src/
                 database is still gated (§1).
   evals/        Scenarios, scorer, and committed baseline scorecard.
   lib/          Shared utils (config; time zones and logging as needed).
-scripts/        run-scenario.ts (offline evals) · smoke-google.ts (manual,
-                live, never in CI)
+scripts/        run-scenario.ts (offline evals) · smoke-google.ts and
+                probe-coverage.ts (manual, live, never in CI)
 fixtures/       mock catalog + future record/replay data (JSON)
 ```
 
@@ -148,6 +148,7 @@ pnpm test        # vitest run (CI mode)
 pnpm test:watch  # vitest watch
 pnpm coverage    # vitest run --coverage
 pnpm eval        # eval scenarios against the mock catalog (offline)
+pnpm probe       # manual, LIVE: is a destination ready to open? (never in CI)
 pnpm verify      # typecheck + lint + test + build (run before every PR)
 ```
 

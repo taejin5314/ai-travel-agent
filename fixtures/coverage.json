@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-08-04T02:36:20.378Z",
+  "destinations": {
+    "osaka": {
+      "ready": false
+    },
+    "kyoto": {
+      "ready": false
+    }
+  }
+}
