@@ -10,6 +10,7 @@ const basePreferences: TripPreferences = {
   startDate: "2026-08-01",
   endDate: "2026-08-05",
   lodging: { name: "Hotel Osaka", area: "Namba" },
+  destinations: ["osaka", "kyoto"],
   partySize: 2,
   mustVisit: ["Osaka Castle", "Dotonbori"],
   interests: ["food"],
@@ -76,6 +77,37 @@ describe("validateTripPreferences", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors.some((e) => e.includes("partySize"))).toBe(true);
+    }
+  });
+});
+
+describe("validateTripPreferences destinations", () => {
+  const base = {
+    startDate: "2026-10-06",
+    endDate: "2026-10-07",
+    lodging: { name: "Hotel", area: "Namba" },
+    partySize: 2,
+    mustVisit: [],
+    interests: [],
+    pace: "balanced" as const,
+  };
+
+  it("accepts a destination the probe found serviceable", () => {
+    expect(
+      validateTripPreferences({ ...base, destinations: ["osaka"] }),
+    ).toEqual({ ok: true });
+  });
+
+  it("rejects a destination we have never probed", () => {
+    // The form cannot offer one, but a hand-crafted POST can ask for one, and
+    // it would otherwise plan against an empty catalog and fail obscurely.
+    const result = validateTripPreferences({
+      ...base,
+      destinations: ["atlantis"],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.includes("atlantis"))).toBe(true);
     }
   });
 });

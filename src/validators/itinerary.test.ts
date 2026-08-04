@@ -34,6 +34,7 @@ const preferences: TripPreferences = {
   startDate: "2026-10-05",
   endDate: "2026-10-07",
   lodging: { name: "Hotel Namba", area: "Namba" },
+  destinations: ["osaka", "kyoto"],
   partySize: 2,
   mustVisit: ["Osaka Castle"],
   interests: ["food"],

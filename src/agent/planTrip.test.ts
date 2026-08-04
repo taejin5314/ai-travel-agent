@@ -53,6 +53,7 @@ const preferences: TripPreferences = {
   startDate: "2026-10-05",
   endDate: "2026-10-06",
   lodging: { name: "Hotel Namba", area: "Namba" },
+  destinations: ["osaka", "kyoto"],
   partySize: 2,
   mustVisit: ["Osaka Castle"],
   interests: ["food"],
@@ -989,6 +990,7 @@ describe("planTrip beyond Osaka and Kyoto", () => {
       {
         ...preferences,
         endDate: preferences.startDate,
+        destinations: ["paris"],
         lodging: { name: "Hôtel", area: "Paris" },
         mustVisit: ["Louvre"],
         interests: [],
@@ -1026,6 +1028,46 @@ describe("planTrip beyond Osaka and Kyoto", () => {
         );
         expect(areas.size).toBeLessThanOrEqual(1);
       }
+    }
+  });
+});
+
+describe("planTrip destination scoping", () => {
+  it("fetches only the chosen destinations, never the whole registry", async () => {
+    // Regression guard: the planner used to call listPlaces() with no
+    // argument, which would have pulled Paris into an Osaka trip the moment
+    // the registry grew past two cities.
+    const asked: (string | undefined)[] = [];
+    const places = new MockPlacesProvider(fixture);
+    const spy = {
+      listPlaces: async (area?: string) => {
+        asked.push(area);
+        return places.listPlaces(area);
+      },
+      getPlaceById: (id: string) => places.getPlaceById(id),
+      findPlacesByName: (query: string) => places.findPlacesByName(query),
+      findRestaurants: places.findRestaurants.bind(places),
+    };
+    const result = await planTrip(
+      { ...preferences, destinations: ["osaka"], mustVisit: [], interests: [] },
+      { places: spy, routes: new MockRoutesProvider() },
+    );
+    expect(result.ok).toBe(true);
+    expect(asked).toEqual(["osaka"]);
+    if (result.ok) {
+      // Kyoto is in the fixture but was never asked for.
+      expect(result.places.some((p) => p.area === "kyoto")).toBe(false);
+    }
+  });
+
+  it("refuses a destination that is not offered", async () => {
+    const result = await planTrip(
+      { ...preferences, destinations: ["atlantis"] },
+      makePorts(),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.includes("atlantis"))).toBe(true);
     }
   });
 });

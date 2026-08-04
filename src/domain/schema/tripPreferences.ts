@@ -16,6 +16,12 @@ export const TripPreferencesSchema = z.object({
     name: z.string().trim().min(1, "lodging.name must not be blank"),
     area: z.string().trim().min(1, "lodging.area must not be blank"),
   }),
+  /**
+   * Where the trip goes. Required and non-empty: the planner used to fetch
+   * every registered destination, which would have mixed Paris into an Osaka
+   * trip the moment the registry grew.
+   */
+  destinations: z.array(z.string().min(1)).min(1),
   partySize: z.number().int().min(1),
   mustVisit: z.array(z.string().min(1)),
   interests: z.array(z.string()),

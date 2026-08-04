@@ -18,6 +18,7 @@ const preferences: TripPreferences = {
   startDate: "2026-08-10",
   endDate: "2026-08-12",
   lodging: { name: "Cross Hotel Osaka", area: "난바" },
+  destinations: ["osaka", "kyoto"],
   partySize: 2,
   mustVisit: ["오사카성", "후시미 이나리"],
   interests: ["음식", "문화"],
