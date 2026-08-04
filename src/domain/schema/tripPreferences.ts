@@ -31,6 +31,12 @@ export const TripPreferencesSchema = z.object({
    * destination registry and is checked by the validator.
    */
   cuisines: z.array(z.string().min(1)).optional(),
+  /**
+   * Places the traveller picked on the map. Guaranteed to appear in the
+   * plan, like a must-visit, but identified by id rather than by a typed
+   * name — the picker knows exactly which place was meant.
+   */
+  selectedPlaceIds: z.array(z.string().min(1)).optional(),
   // A closed set: every member changes the schedule. See constraint.ts.
   constraints: z.array(TripConstraintSchema).optional(),
 });

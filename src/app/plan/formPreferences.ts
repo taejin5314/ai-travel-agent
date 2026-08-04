@@ -297,6 +297,7 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
   const constraints = getStrings(formData, "constraints");
   const cuisines = getStrings(formData, "cuisines");
   const destinations = getStrings(formData, "destinations");
+  const selectedPlaceIds = getStrings(formData, "selectedPlaceIds");
 
   return {
     startDate: getString(formData, "startDate"),
@@ -311,6 +312,8 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
     interests: splitEntries(getString(formData, "interests")),
     pace: getString(formData, "pace"),
     cuisines: cuisines.length > 0 ? cuisines : undefined,
+    selectedPlaceIds:
+      selectedPlaceIds.length > 0 ? selectedPlaceIds : undefined,
     constraints: constraints.length > 0 ? constraints : undefined,
   };
 }

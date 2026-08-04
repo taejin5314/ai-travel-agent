@@ -8,6 +8,7 @@ import {
   DESTINATION_OPTIONS,
   initialPlanFormState,
 } from "./formPreferences";
+import { PlacePicker } from "./PlacePicker";
 import { PlanSummary } from "./PlanSummary";
 
 const PACE_OPTIONS = [
@@ -30,6 +31,7 @@ export function PlanForm() {
   // The cuisine list depends on the destinations picked, so the choice has
   // to be observed here rather than read from FormData at submit time.
   const [chosenDestinations, setChosenDestinations] = useState<string[]>([]);
+  const [chosenCuisines, setChosenCuisines] = useState<string[]>([]);
 
   if (state.status === "success") {
     return (
@@ -205,6 +207,13 @@ export function PlanForm() {
                 name="cuisines"
                 value={option.value}
                 defaultChecked={values?.cuisines.includes(option.value)}
+                onChange={(event) =>
+                  setChosenCuisines((current) =>
+                    event.target.checked
+                      ? [...current, option.value]
+                      : current.filter((id) => id !== option.value),
+                  )
+                }
                 className="sr-only"
               />
               {option.label}
@@ -213,6 +222,11 @@ export function PlanForm() {
         </div>
         )}
       </fieldset>
+
+      <PlacePicker
+        destinations={chosenDestinations}
+        cuisines={chosenCuisines}
+      />
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className={labelClassName}>제약 조건 (선택)</legend>

@@ -1071,3 +1071,52 @@ describe("planTrip destination scoping", () => {
     }
   });
 });
+
+describe("planTrip selected places", () => {
+  it("guarantees a place picked by id, without needing its name typed", async () => {
+    const result = await planTrip(
+      {
+        ...preferences,
+        endDate: preferences.startDate,
+        mustVisit: [],
+        interests: [],
+        selectedPlaceIds: ["fushimi-inari"],
+      },
+      makePorts(),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids).toContain("fushimi-inari");
+    }
+  });
+
+  it("fails clearly when a picked id is not in the catalog", async () => {
+    // The picker only offers real ids, but the action is a public endpoint.
+    const result = await planTrip(
+      { ...preferences, selectedPlaceIds: ["not-a-place"] },
+      makePorts(),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.includes("not-a-place"))).toBe(true);
+    }
+  });
+
+  it("does not duplicate a place that is both typed and picked", async () => {
+    const result = await planTrip(
+      {
+        ...preferences,
+        endDate: preferences.startDate,
+        mustVisit: ["Osaka Castle"],
+        selectedPlaceIds: ["osaka-castle"],
+      },
+      makePorts(),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids.filter((id) => id === "osaka-castle")).toHaveLength(1);
+    }
+  });
+});
