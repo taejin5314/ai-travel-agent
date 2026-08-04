@@ -4,13 +4,63 @@
     "name": "오사카",
     "searchName": "Osaka, Japan",
     "country": "JP",
-    "bounds": { "lat": [34.3, 34.85], "lng": [135.25, 135.75] }
+    "bounds": {
+      "lat": [
+        34.3,
+        34.85
+      ],
+      "lng": [
+        135.25,
+        135.75
+      ]
+    }
   },
   {
     "id": "kyoto",
     "name": "교토",
     "searchName": "Kyoto, Japan",
     "country": "JP",
-    "bounds": { "lat": [34.85, 35.2], "lng": [135.55, 135.95] }
+    "bounds": {
+      "lat": [
+        34.85,
+        35.2
+      ],
+      "lng": [
+        135.55,
+        135.95
+      ]
+    }
+  },
+  {
+    "id": "seoul",
+    "name": "서울",
+    "searchName": "Seoul, South Korea",
+    "country": "KR",
+    "bounds": {
+      "lat": [
+        37.42,
+        37.7
+      ],
+      "lng": [
+        126.76,
+        127.18
+      ]
+    }
+  },
+  {
+    "id": "paris",
+    "name": "파리",
+    "searchName": "Paris, France",
+    "country": "FR",
+    "bounds": {
+      "lat": [
+        48.8,
+        48.92
+      ],
+      "lng": [
+        2.22,
+        2.47
+      ]
+    }
   }
 ]

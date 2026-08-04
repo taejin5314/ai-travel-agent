@@ -239,7 +239,11 @@ export async function planTrip(
     return { ok: false, errors: preferencesCheck.errors };
   }
 
-  const catalog = await ports.places.listPlaces();
+  // Exactly the chosen destinations — never the whole registry.
+  const catalogs = await Promise.all(
+    preferences.destinations.map((id) => ports.places.listPlaces(id)),
+  );
+  const catalog = catalogs.flat();
 
   const mustVisitPlaces: Place[] = [];
   const missingMustVisits: string[] = [];
@@ -276,7 +280,13 @@ export async function planTrip(
   const requestedCuisines = preferences.cuisines ?? [];
   const cuisineMatches =
     requestedCuisines.length > 0
-      ? await ports.places.findRestaurants(requestedCuisines)
+      ? (
+          await Promise.all(
+            preferences.destinations.map((id) =>
+              ports.places.findRestaurants(requestedCuisines, id),
+            ),
+          )
+        ).flat()
       : [];
   const preferredRestaurantIds = new Set(cuisineMatches.map((p) => p.id));
   const restaurantsById = new Map<string, Place>();

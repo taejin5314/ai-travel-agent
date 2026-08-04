@@ -5,6 +5,7 @@ import { submitTripPreferences } from "./actions";
 import {
   CONSTRAINT_OPTIONS,
   CUISINE_OPTIONS,
+  DESTINATION_OPTIONS,
   initialPlanFormState,
 } from "./formPreferences";
 import { PlanSummary } from "./PlanSummary";
@@ -42,6 +43,32 @@ export function PlanForm() {
 
   return (
     <form action={formAction} className="flex w-full flex-col gap-5">
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className={labelClassName}>여행 지역</legend>
+        <div className="flex flex-wrap gap-2">
+          {DESTINATION_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-sm has-[:checked]:border-foreground has-[:checked]:bg-foreground has-[:checked]:text-background dark:border-white/15"
+            >
+              <input
+                type="checkbox"
+                name="destinations"
+                value={option.value}
+                defaultChecked={values?.destinations.includes(option.value)}
+                className="sr-only"
+              />
+              {option.label}
+              {/* Shipped, but its travel times are proxies — say so here
+                  rather than quietly withhold the destination. */}
+              {!option.transitMeasured && (
+                <span className="text-xs opacity-70">이동 추정</span>
+              )}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className={labelClassName}>시작일</span>

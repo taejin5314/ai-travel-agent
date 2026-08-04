@@ -4,6 +4,7 @@ import { formatCost, hasFigure, totalCost } from "./cost";
 import {
   constraintLabel,
   cuisineLabel,
+  destinationLabel,
   type ItineraryViewDay,
 } from "./formPreferences";
 
@@ -184,6 +185,12 @@ export function PlanSummary({
           <dt className="text-zinc-600 dark:text-zinc-400">기간</dt>
           <dd>
             {data.startDate} ~ {data.endDate}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-zinc-600 dark:text-zinc-400">여행 지역</dt>
+          <dd className="text-right">
+            {data.destinations.map(destinationLabel).join(", ")}
           </dd>
         </div>
         <div className="flex justify-between gap-4">

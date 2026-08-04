@@ -1,3 +1,4 @@
+import { serviceableDestinations } from "@/domain/coverage";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 
 export const MAX_TRIP_LENGTH_DAYS = 30;
@@ -30,6 +31,16 @@ export function validateTripPreferences(
     errors.push(
       `Trip length (${tripLength} days) exceeds the maximum of ${MAX_TRIP_LENGTH_DAYS} days.`,
     );
+  }
+
+  // The form only offers serviceable destinations, but a hand-crafted POST
+  // must not get a plan for a city we have never probed — it would be built
+  // on an empty catalog and fail obscurely later.
+  const unavailable = input.destinations.filter(
+    (id) => !serviceableDestinations().some((entry) => entry.id === id),
+  );
+  if (unavailable.length > 0) {
+    errors.push(`Unavailable destinations: ${unavailable.join(", ")}.`);
   }
 
   const seen = new Set<string>();

@@ -47,8 +47,8 @@ src/
                 database is still gated (§1).
   evals/        Scenarios, scorer, and committed baseline scorecard.
   lib/          Shared utils (config; time zones and logging as needed).
-scripts/        run-scenario.ts (offline evals) · smoke-google.ts (manual,
-                live, never in CI)
+scripts/        run-scenario.ts (offline evals) · smoke-google.ts and
+                probe-coverage.ts (manual, live, never in CI)
 fixtures/       mock catalog + future record/replay data (JSON)
 ```
 
@@ -148,10 +148,31 @@ pnpm test        # vitest run (CI mode)
 pnpm test:watch  # vitest watch
 pnpm coverage    # vitest run --coverage
 pnpm eval        # eval scenarios against the mock catalog (offline)
+pnpm probe       # manual, LIVE: what do the APIs return for a destination?
 pnpm verify      # typecheck + lint + test + build (run before every PR)
 ```
 
 Package manager is **pnpm**. Node is pinned via `engines` (>=20.9.0).
+
+---
+
+## 6b. Opening a destination
+
+Destinations are data (`fixtures/destinations.json`). Two separate questions
+decide whether one ships, and conflating them is a mistake we already made
+once:
+
+- **Serviceable** — does place search return results inside its bounds? This
+  is the gate. Without places there is nothing to schedule, and `pnpm probe`
+  exits non-zero.
+- **Transit measured** — does a real transit route come back? This is a
+  **quality badge, not a gate.** Google serves no transit in Japan, so Osaka
+  and Kyoto ship with proxy travel times, clearly labelled as estimates in
+  the itinerary. A destination is not withheld for it.
+
+`pnpm probe --update` rewrites `fixtures/coverage.json`, dated. Never
+hand-edit that file — the moment it is edited it stops being a measurement
+and becomes a claim, which is the thing it exists to replace.
 
 ---
 

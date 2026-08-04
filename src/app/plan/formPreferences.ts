@@ -1,4 +1,8 @@
 import type { ZodError } from "zod";
+import {
+  hasMeasuredTransit,
+  serviceableDestinations,
+} from "@/domain/coverage";
 import type { TripConstraint } from "@/domain/schema/constraint";
 import type { Cuisine } from "@/domain/schema/cuisine";
 import type { Itinerary } from "@/domain/schema/itinerary";
@@ -24,6 +28,8 @@ export type PlanFormValues = {
   mustVisit: string;
   interests: string;
   pace: string;
+  /** Checked destination ids, kept raw so the form can restore them. */
+  destinations: string[];
   /** Checked cuisine values, kept raw so the form can restore them. */
   cuisines: string[];
   /** Checked constraint values, kept raw so the form can restore them. */
@@ -56,6 +62,30 @@ export const CONSTRAINT_OPTIONS: readonly {
     hint: "걸어갈 만한 거리도 대중교통을 이용합니다",
   },
 ];
+
+/**
+ * Only destinations the probe found serviceable, so the form cannot offer a
+ * city that would plan against an empty catalog. Whether travel times there
+ * are measured or estimated is shown, not used to hide the option
+ * (AGENTS.md §6b).
+ */
+export const DESTINATION_OPTIONS: readonly {
+  value: string;
+  label: string;
+  transitMeasured: boolean;
+}[] = serviceableDestinations().map((destination) => ({
+  value: destination.id,
+  label: destination.name,
+  transitMeasured: hasMeasuredTransit(destination.id),
+}));
+
+const DESTINATION_LABELS = new Map(
+  DESTINATION_OPTIONS.map((option) => [option.value, option.label]),
+);
+
+export function destinationLabel(id: string): string {
+  return DESTINATION_LABELS.get(id) ?? id;
+}
 
 /**
  * The cuisines the form offers. Every entry drives a real catalog search in
@@ -192,6 +222,7 @@ const FIELD_LABELS: Record<string, string> = {
   endDate: "여행 종료일",
   "lodging.name": "숙소 이름",
   "lodging.area": "숙소 지역",
+  destinations: "여행 지역",
   partySize: "인원 수",
   mustVisit: "필수 방문지",
   interests: "관심사",
@@ -230,6 +261,7 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
   // enum is what decides whether each is a constraint we honour.
   const constraints = getStrings(formData, "constraints");
   const cuisines = getStrings(formData, "cuisines");
+  const destinations = getStrings(formData, "destinations");
 
   return {
     startDate: getString(formData, "startDate"),
@@ -238,6 +270,7 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
       name: getString(formData, "lodgingName"),
       area: getString(formData, "lodgingArea"),
     },
+    destinations,
     partySize: Number(getString(formData, "partySize")),
     mustVisit: splitEntries(getString(formData, "mustVisit")),
     interests: splitEntries(getString(formData, "interests")),
@@ -254,6 +287,7 @@ export function extractFormValues(formData: FormData): PlanFormValues {
     endDate: getString(formData, "endDate"),
     lodgingName: getString(formData, "lodgingName"),
     lodgingArea: getString(formData, "lodgingArea"),
+    destinations: getStrings(formData, "destinations"),
     partySize: getString(formData, "partySize"),
     mustVisit: getString(formData, "mustVisit"),
     interests: getString(formData, "interests"),
@@ -286,6 +320,9 @@ export function translateValidationErrors(errors: string[]): string[] {
     );
     if (duplicateMatch) {
       return `필수 방문지에 중복된 항목이 있습니다: ${duplicateMatch[1]}`;
+    }
+    if (message.startsWith("Unavailable destinations")) {
+      return "선택하신 여행 지역은 아직 지원하지 않습니다.";
     }
     if (message.startsWith("partySize must be between")) {
       return `인원 수는 ${MIN_PARTY_SIZE}명에서 ${MAX_PARTY_SIZE}명 사이여야 합니다.`;
