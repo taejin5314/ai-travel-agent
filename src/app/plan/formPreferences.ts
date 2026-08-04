@@ -2,6 +2,7 @@ import type { ZodError } from "zod";
 import type { TripConstraint } from "@/domain/schema/constraint";
 import type { Cuisine } from "@/domain/schema/cuisine";
 import type { Itinerary } from "@/domain/schema/itinerary";
+import { estimateCost, type CostEstimate } from "@/domain/cost";
 import type { Place } from "@/domain/schema/place";
 import type { TravelLeg } from "@/domain/schema/travel";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
@@ -89,6 +90,8 @@ export function constraintLabel(constraint: TripConstraint): string {
 /** Presentation-only view of a generated itinerary (place ids resolved to names). */
 export type ItineraryViewDay = {
   date: string;
+  /** Meal cost for this day, or absent when nothing on it had a price. */
+  cost?: CostEstimate;
   items: {
     placeName: string;
     start: string;
@@ -101,6 +104,8 @@ export type ItineraryViewDay = {
     placeUrl: string;
     /** Where the stop is, for drawing the day's shape. Absent if unknown. */
     location?: { lat: number; lng: number };
+    /** Typical spend per person here, when the source reports one. */
+    priceRange?: Place["priceRange"];
     /**
      * Google Maps directions for the hop that reaches this stop. Absent on
      * the first stop of a day, and whenever the place is unknown.
@@ -124,10 +129,20 @@ const UNKNOWN_PLACE_URL = "https://www.google.com/maps";
 export function buildItineraryView(
   itinerary: Itinerary,
   places: readonly Place[],
+  partySize = 1,
 ): ItineraryViewDay[] {
   const placeById = new Map(places.map((p) => [p.id, p]));
   return itinerary.days.map((day) => ({
     date: day.date,
+    // Meals only: Google has no admission price for attractions and no fare
+    // for transit, so a day total that included them would be invented.
+    ...(() => {
+      const meals = day.activities
+        .map((a) => placeById.get(a.placeId))
+        .filter((p): p is Place => p?.category === "restaurant");
+      const cost = estimateCost(meals, partySize);
+      return cost === undefined ? {} : { cost };
+    })(),
     items: day.activities.map((activity, index) => {
       const place = placeById.get(activity.placeId);
       // The hop is FROM the previous stop of the same day. Links are built
@@ -143,6 +158,7 @@ export function buildItineraryView(
         travel: activity.travel,
         placeUrl: place === undefined ? UNKNOWN_PLACE_URL : placeUrl(place),
         ...(place !== undefined && { location: place.location }),
+        ...(place?.priceRange !== undefined && { priceRange: place.priceRange }),
         ...(place !== undefined &&
           previous !== undefined && {
             directionsUrl: directionsUrl(

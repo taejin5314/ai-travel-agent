@@ -24,7 +24,7 @@ export default async function SavedPlanPage({
 
         <PlanSummary
           data={plan.preferences}
-          itinerary={buildItineraryView(plan.itinerary, plan.places)}
+          itinerary={buildItineraryView(plan.itinerary, plan.places, plan.preferences.partySize)}
           dataSource={plan.dataSource}
         />
 

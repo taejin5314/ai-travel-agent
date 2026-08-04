@@ -27,6 +27,19 @@ export const GooglePlaceSchema = z.object({
   types: z.array(z.string()).optional(),
   /** Google's single best guess at what this place IS — more reliable than the types soup. */
   primaryType: z.string().optional(),
+  /** Bucketed price band; sparser than priceRange, so only a fallback. */
+  priceLevel: z.string().optional(),
+  /** Real figures, e.g. { startPrice: { currencyCode: "JPY", units: "1000" } }. */
+  priceRange: z
+    .object({
+      startPrice: z
+        .object({ currencyCode: z.string(), units: z.string().optional() })
+        .optional(),
+      endPrice: z
+        .object({ currencyCode: z.string(), units: z.string().optional() })
+        .optional(),
+    })
+    .optional(),
   regularOpeningHours: z
     .object({
       periods: z
