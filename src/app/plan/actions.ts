@@ -88,8 +88,10 @@ export async function submitTripPreferences(
   }
 
   // Keep only the places this itinerary actually references, so the shared
-  // page can render without calling Google again.
-  const catalog = await ports.places.listPlaces();
+  // page can render without calling Google again. The planner returns the
+  // places it used — including any a cuisine search pulled in, which are not
+  // in the catalog.
+  const catalog = plan.places;
   const scheduledIds = new Set(
     plan.itinerary.days.flatMap((day) => day.activities.map((a) => a.placeId)),
   );

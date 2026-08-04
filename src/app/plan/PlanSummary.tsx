@@ -1,5 +1,10 @@
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
-import { constraintLabel, type ItineraryViewDay } from "./formPreferences";
+import { DayMap } from "./DayMap";
+import {
+  constraintLabel,
+  cuisineLabel,
+  type ItineraryViewDay,
+} from "./formPreferences";
 
 const PACE_LABELS: Record<TripPreferences["pace"], string> = {
   relaxed: "여유롭게",
@@ -31,6 +36,8 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
             {day.items.length === 0 ? (
               <p className="text-sm text-zinc-500">자유 시간</p>
             ) : (
+              <>
+              <DayMap items={day.items} />
               <ul className="flex flex-col gap-1 text-sm">
                 {day.items.map((item, itemIndex) => (
                   <li key={`${day.date}-${item.start}`}>
@@ -77,6 +84,10 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                     )}
                     <div className="flex justify-between gap-4">
                       <span>
+                        {/* Same number as the marker on the map above. */}
+                        <span className="mr-1.5 text-xs tabular-nums text-zinc-500">
+                          {itemIndex + 1}
+                        </span>
                         {item.kind === "meal" ? "🍽️ " : ""}
                         <a
                           href={item.placeUrl}
@@ -99,6 +110,7 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                   </li>
                 ))}
               </ul>
+              </>
             )}
           </li>
         ))}
@@ -152,6 +164,14 @@ export function PlanSummary({
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-600 dark:text-zinc-400">여행 속도</dt>
           <dd>{PACE_LABELS[data.pace]}</dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="text-zinc-600 dark:text-zinc-400">먹고 싶은 음식</dt>
+          <dd className="text-right">
+            {data.cuisines && data.cuisines.length > 0
+              ? data.cuisines.map(cuisineLabel).join(", ")
+              : "-"}
+          </dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-600 dark:text-zinc-400">제약 조건</dt>

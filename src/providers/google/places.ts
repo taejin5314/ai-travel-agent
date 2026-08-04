@@ -1,3 +1,4 @@
+import type { Cuisine } from "@/domain/schema/cuisine";
 import { PlaceSchema, type Place } from "@/domain/schema/place";
 import type { PlaceArea, PlacesPort } from "@/providers/ports";
 import {
@@ -73,6 +74,26 @@ const VISIT_MINUTES_BY_CATEGORY: Record<Place["category"], number> = {
   entertainment: 180,
   restaurant: 60,
   lodging: 1,
+};
+
+/**
+ * Search phrases per cuisine, `{area}` filled in per city. Phrases rather
+ * than Google place types because the type vocabulary has no word for
+ * okonomiyaki or kaiseki — a text search finds what a type filter cannot.
+ */
+const CUISINE_QUERIES: Record<Cuisine, string> = {
+  ramen: "famous ramen restaurants in {area} Japan",
+  sushi: "best sushi restaurants in {area} Japan",
+  okonomiyaki: "okonomiyaki and takoyaki restaurants in {area} Japan",
+  "udon-soba": "udon and soba restaurants in {area} Japan",
+  yakiniku: "yakiniku and wagyu restaurants in {area} Japan",
+  kaiseki: "traditional kaiseki restaurants in {area} Japan",
+  cafe: "popular cafes and dessert shops in {area} Japan",
+};
+
+const AREA_NAMES: Record<PlaceArea, string> = {
+  osaka: "Osaka",
+  kyoto: "Kyoto",
 };
 
 /**
@@ -393,6 +414,31 @@ export class GooglePlacesProvider implements PlacesPort {
       this.catalogFor("kyoto"),
     ]);
     return [...osaka, ...kyoto];
+  }
+
+  async findRestaurants(
+    cuisines: readonly Cuisine[],
+    area?: PlaceArea,
+  ): Promise<Place[]> {
+    if (cuisines.length === 0) {
+      return [];
+    }
+    const areas: PlaceArea[] = area !== undefined ? [area] : ["osaka", "kyoto"];
+    const queries = cuisines.flatMap((cuisine) =>
+      areas.map((a) => CUISINE_QUERIES[cuisine].replace("{area}", AREA_NAMES[a])),
+    );
+    const results = await Promise.all(
+      queries.map((query) => this.searchText(query)),
+    );
+    // A cuisine query still returns the odd museum next door; the pool this
+    // feeds is for meal slots, so anything that is not a restaurant is noise.
+    const byId = new Map<string, Place>();
+    for (const place of results.flat()) {
+      if (place.category === "restaurant") {
+        byId.set(place.id, place);
+      }
+    }
+    return [...byId.values()];
   }
 
   async getPlaceById(id: string): Promise<Place | null> {
