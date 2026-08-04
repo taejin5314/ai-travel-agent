@@ -1120,3 +1120,105 @@ describe("planTrip selected places", () => {
     }
   });
 });
+
+describe("planTrip resolves names inside the chosen destinations", () => {
+  // A name search covers the whole registry, so with several destinations
+  // open the wrong city can win. Live symptom: a Seoul trip whose lodging
+  // "호텔" resolved to a hotel in Kyoto anchored every day there, put every
+  // Seoul stop out of travel range, and produced an empty itinerary.
+  const elsewhere: Place[] = [
+    {
+      id: "kyoto-hotel",
+      name: "호텔 교토",
+      area: "kyoto",
+      category: "lodging",
+      location: { lat: 34.9858, lng: 135.7588 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 1,
+    },
+    {
+      id: "kyoto-shrine",
+      name: "전쟁기념관",
+      area: "kyoto",
+      category: "culture",
+      location: { lat: 34.9671, lng: 135.7727 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 90,
+    },
+  ];
+  const here: Place[] = [
+    {
+      id: "osaka-hotel",
+      name: "호텔 오사카",
+      area: "osaka",
+      category: "lodging",
+      location: { lat: 34.6664, lng: 135.5013 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 1,
+    },
+    {
+      id: "osaka-memorial",
+      name: "전쟁기념관",
+      area: "osaka",
+      category: "culture",
+      location: { lat: 34.667, lng: 135.502 },
+      openingHours: [daily, daily, daily, daily, daily, daily, daily],
+      typicalVisitMinutes: 60,
+    },
+  ];
+
+  function plan(over: Partial<TripPreferences>) {
+    return planTrip(
+      {
+        ...preferences,
+        endDate: preferences.startDate,
+        destinations: ["osaka"],
+        lodging: { name: "호텔", area: "Namba" },
+        mustVisit: [],
+        interests: [],
+        ...over,
+      },
+      {
+        places: new MockPlacesProvider([...elsewhere, ...here]),
+        routes: new MockRoutesProvider(),
+      },
+    );
+  }
+
+  it("anchors on a lodging in the chosen destination, not another city", async () => {
+    const result = await plan({ selectedPlaceIds: ["osaka-memorial"] });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const first = result.itinerary.days[0].activities[0];
+      expect(first.placeId).toBe("osaka-memorial");
+      // The anchor is what this asserts, not merely that something got
+      // scheduled: the Kyoto hotel is first in the catalog, and departing
+      // from it makes the first hop an intercity ride rather than a stroll
+      // across Namba.
+      expect(first.travel?.minutes ?? 0).toBeLessThan(15);
+    }
+  });
+
+  it("resolves an ambiguous name to the chosen destination", async () => {
+    const result = await plan({ mustVisit: ["전쟁기념관"] });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids).toContain("osaka-memorial");
+      expect(ids).not.toContain("kyoto-shrine");
+    }
+  });
+
+  it("refuses a picked id outside the chosen destinations, and says so", async () => {
+    const result = await plan({ selectedPlaceIds: ["kyoto-shrine"] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      // It failed before this fix too, but as an internal validator error
+      // about an unknown place id — the catalog never contained it. A refusal
+      // has to name the place and read like an answer, not a crash.
+      expect(result.errors[0]).toContain("찾지 못했습니다");
+      expect(result.errors[0]).toContain("전쟁기념관");
+      expect(result.errors.join(" ")).not.toContain("내부 오류");
+    }
+  });
+});
