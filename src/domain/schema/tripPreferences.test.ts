@@ -25,7 +25,7 @@ describe("TripPreferencesSchema", () => {
       endDate: "2026-08-05",
       lodging: { name: "Hotel Osaka", area: "Namba" },
       destinations: ["osaka", "kyoto"],
-  partySize: 2,
+      partySize: 2,
       mustVisit: ["Osaka Castle"],
       interests: ["food"],
       pace: "balanced",

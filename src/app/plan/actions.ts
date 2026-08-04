@@ -1,6 +1,8 @@
 "use server";
 
+import { discoverPlaces } from "@/agent/discoverPlaces";
 import { planTrip } from "@/agent/planTrip";
+import { serviceableDestinations } from "@/domain/coverage";
 import { itineraryStore } from "@/db/store";
 import { TripPreferencesSchema } from "@/domain/schema/tripPreferences";
 import { googleMapsApiKey } from "@/lib/config";
@@ -14,7 +16,9 @@ import {
   buildTripPreferencesCandidate,
   extractFormValues,
   translateSchemaErrors,
+  toCandidateView,
   translateValidationErrors,
+  type CandidateView,
   type PlanFormState,
 } from "./formPreferences";
 
@@ -38,6 +42,32 @@ function buildPorts() {
   };
 }
 const ports = buildPorts();
+
+/**
+ * Candidates to show on the picker, for destinations the probe found
+ * serviceable. Everything comes back as a view model rather than a domain
+ * Place: the client only ever needs a pin and a label, and shipping the whole
+ * catalog over the wire would leak more than the UI can use.
+ */
+export async function discoverCandidates(input: {
+  destinations: readonly string[];
+  cuisines?: readonly string[];
+  limit?: number;
+}): Promise<{ attractions: CandidateView[]; restaurants: CandidateView[] }> {
+  const available = new Set(serviceableDestinations().map((entry) => entry.id));
+  const destinations = input.destinations.filter((id) => available.has(id));
+  if (destinations.length === 0) {
+    return { attractions: [], restaurants: [] };
+  }
+  const found = await discoverPlaces(ports.places, destinations, {
+    ...(input.cuisines !== undefined && { cuisines: input.cuisines }),
+    ...(input.limit !== undefined && { limit: input.limit }),
+  });
+  return {
+    attractions: found.attractions.map(toCandidateView),
+    restaurants: found.restaurants.map(toCandidateView),
+  };
+}
 
 export async function submitTripPreferences(
   _prevState: PlanFormState,

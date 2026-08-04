@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { submitTripPreferences } from "@/app/plan/actions";
+import {
+  discoverCandidates,
+  submitTripPreferences,
+} from "@/app/plan/actions";
 import { buildItineraryView, initialPlanFormState } from "@/app/plan/formPreferences";
 import { itineraryStore } from "@/db/store";
 
@@ -116,7 +119,7 @@ describe("submitTripPreferences", () => {
         interests: "food",
         pace: "balanced",
         cuisines: [] as string[],
-  constraints: [] as string[],
+        constraints: [] as string[],
       },
     });
   });
@@ -157,7 +160,7 @@ describe("submitTripPreferences", () => {
         interests: "food",
         pace: "balanced",
         cuisines: [] as string[],
-  constraints: [] as string[],
+        constraints: [] as string[],
       });
     }
   });
@@ -228,5 +231,42 @@ describe("submitTripPreferences persistence", () => {
       expect(result.planId).toBeUndefined();
       expect(result.planningNotice).toBeDefined();
     }
+  });
+});
+
+describe("discoverCandidates", () => {
+  it("returns ranked candidates for a serviceable destination", async () => {
+    const found = await discoverCandidates({ destinations: ["osaka"] });
+    expect(found.attractions.length).toBeGreaterThan(0);
+    expect(found.restaurants.length).toBeGreaterThan(0);
+    for (const candidate of found.attractions) {
+      expect(candidate.category).not.toBe("restaurant");
+      expect(candidate.category).not.toBe("lodging");
+      expect(candidate.placeUrl).toContain("google.com/maps");
+    }
+  });
+
+  it("ignores a destination the probe never found serviceable", async () => {
+    // The picker cannot offer one, but the action is a public endpoint.
+    const found = await discoverCandidates({ destinations: ["atlantis"] });
+    expect(found).toEqual({ attractions: [], restaurants: [] });
+  });
+
+  it("drops unavailable destinations but serves the rest", async () => {
+    const found = await discoverCandidates({
+      destinations: ["atlantis", "osaka"],
+    });
+    expect(found.attractions.length).toBeGreaterThan(0);
+    for (const candidate of [...found.attractions, ...found.restaurants]) {
+      expect(candidate.destination).toBe("osaka");
+    }
+  });
+
+  it("honours the limit so the map is not flooded", async () => {
+    const found = await discoverCandidates({
+      destinations: ["osaka", "kyoto"],
+      limit: 3,
+    });
+    expect(found.attractions).toHaveLength(3);
   });
 });
