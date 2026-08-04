@@ -1,11 +1,13 @@
 {
-  "checkedAt": "2026-08-04T02:36:20.378Z",
+  "checkedAt": "2026-08-04T02:45:53.860Z",
   "destinations": {
     "osaka": {
-      "ready": false
+      "serviceable": true,
+      "transitMeasured": false
     },
     "kyoto": {
-      "ready": false
+      "serviceable": true,
+      "transitMeasured": false
     }
   }
 }

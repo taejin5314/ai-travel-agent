@@ -17,7 +17,10 @@
  *
  * Cost: 3-4 billed requests per destination (2 place searches, 1 transit
  * route, plus 1 driving route only when transit yields nothing usable).
- * Exits non-zero if any probed destination lacks measured transit.
+ * Exits non-zero only when a destination is UNSERVICEABLE — no place data,
+ * so nothing can be scheduled. Missing transit is reported as a quality
+ * badge, not a gate: those destinations still ship, and the itinerary labels
+ * their travel times as estimates.
  */
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -36,11 +39,19 @@ type Report = {
   attractions: number;
   restaurants: number;
   pricedRestaurants: number;
-  /** True only when a routing service measured a real transit route. */
+  /**
+   * Can we build a usable plan here at all? This is the gate: without place
+   * data there is nothing to schedule.
+   */
+  serviceable: boolean;
+  /**
+   * Quality badge, NOT a gate. A destination without measured transit still
+   * ships — the itinerary is honest about its estimates — but the times are
+   * proxies rather than departure boards.
+   */
   transitMeasured: boolean;
   transitDetail: string;
   lines: string[];
-  ready: boolean;
   notes: string[];
 };
 
@@ -108,10 +119,10 @@ async function probe(
       attractions: attractions.length,
       restaurants: restaurants.length,
       pricedRestaurants,
+      serviceable: attractions.length > 0,
       transitMeasured: false,
       transitDetail: "not tested — too few places to route between",
       lines: [],
-      ready: false,
       notes: [...notes, "could not test transit: bounds may be wrong"],
     };
   }
@@ -121,7 +132,8 @@ async function probe(
   const lines = (estimate.lines ?? []).map((ride) => ride.line);
   if (!measured) {
     notes.push(
-      "transit unavailable — plans here would be built on estimates (see #46)",
+      "transit unavailable — travel times here are estimates, and the" +
+        " itinerary labels them as such (see #46)",
     );
   }
 
@@ -131,12 +143,12 @@ async function probe(
     attractions: attractions.length,
     restaurants: restaurants.length,
     pricedRestaurants,
+    serviceable: attractions.length > 0,
     transitMeasured: measured,
     transitDetail: measured
       ? `${estimate.minutes} min measured`
       : `${estimate.minutes} min ESTIMATED (${estimate.mode})`,
     lines,
-    ready: measured && attractions.length > 0,
     notes,
   };
 }
@@ -146,9 +158,12 @@ function print(report: Report | { id: string; error: string }): void {
     console.log(`${report.id.padEnd(12)} ERROR  ${report.error}`);
     return;
   }
-  console.log(
-    `${report.ready ? "READY " : "NOT READY"}  ${report.id} (${report.country})`,
-  );
+  const status = !report.serviceable
+    ? "UNSERVICEABLE"
+    : report.transitMeasured
+      ? "READY        "
+      : "READY (est.) ";
+  console.log(`${status}  ${report.id} (${report.country})`);
   console.log(
     `    places: ${report.attractions} attractions · ${report.restaurants} restaurants, ${report.pricedRestaurants} priced`,
   );
@@ -204,7 +219,12 @@ async function main(): Promise<void> {
           destinations: Object.fromEntries(
             reports.map((report) => [
               report.id,
-              "error" in report ? { ready: false } : { ready: report.ready },
+              "error" in report
+                ? { serviceable: false, transitMeasured: false }
+                : {
+                    serviceable: report.serviceable,
+                    transitMeasured: report.transitMeasured,
+                  },
             ]),
           ),
         },
@@ -215,16 +235,29 @@ async function main(): Promise<void> {
     console.log(`\nCoverage written to ${COVERAGE_PATH}`);
   }
 
-  const notReady = reports.filter(
-    (report) => "error" in report || !report.ready,
+  // Only an unserviceable destination fails the command. Missing transit is a
+  // quality signal, not a reason to refuse to plan — the itinerary already
+  // says which legs are estimates, so a traveller is not misled either way.
+  const blocked = reports.filter(
+    (report) => "error" in report || !report.serviceable,
   );
-  if (notReady.length > 0) {
+  if (blocked.length > 0) {
     console.error(
-      `\n${notReady.length} destination(s) not ready: ${notReady
+      `\n${blocked.length} destination(s) unserviceable: ${blocked
         .map((report) => report.id)
         .join(", ")}`,
     );
     process.exit(1);
+  }
+  const estimated = reports.filter(
+    (report) => !("error" in report) && !report.transitMeasured,
+  );
+  if (estimated.length > 0) {
+    console.log(
+      `\n${estimated.length} destination(s) ship with estimated travel times: ${estimated
+        .map((report) => report.id)
+        .join(", ")}`,
+    );
   }
 }
 
