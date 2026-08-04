@@ -246,9 +246,20 @@ export async function planTrip(
   const catalog = catalogs.flat();
 
   const mustVisitPlaces: Place[] = [];
+  /**
+   * A name search covers every registered destination, so "호텔" on a Seoul
+   * trip used to resolve to a hotel in Kyoto — the day then anchored there
+   * and every Seoul stop fell out of reach, producing an empty itinerary.
+   * Nothing outside the chosen destinations may be resolved.
+   */
+  const chosen = new Set(preferences.destinations);
+  const inChosenDestination = (place: Place) => chosen.has(place.area);
+
   const missingMustVisits: string[] = [];
   for (const rawName of preferences.mustVisit) {
-    const matches = await ports.places.findPlacesByName(rawName);
+    const matches = (await ports.places.findPlacesByName(rawName)).filter(
+      inChosenDestination,
+    );
     const exact = matches.find((p) => matchesExactly(p, rawName));
     const resolved = exact ?? matches[0];
     if (resolved === undefined) {
@@ -261,8 +272,8 @@ export async function planTrip(
   // so there is no name to mis-resolve.
   for (const id of preferences.selectedPlaceIds ?? []) {
     const resolved = await ports.places.getPlaceById(id);
-    if (resolved === null) {
-      missingMustVisits.push(id);
+    if (resolved === null || !inChosenDestination(resolved)) {
+      missingMustVisits.push(resolved?.name ?? id);
     } else if (!mustVisitPlaces.some((p) => p.id === resolved.id)) {
       mustVisitPlaces.push(resolved);
     }
@@ -312,7 +323,7 @@ export async function planTrip(
   // Free text stays supported: an unknown lodging just plans without anchor.
   const lodgingPlace = (
     await ports.places.findPlacesByName(preferences.lodging.name)
-  ).find((p) => p.category === "lodging");
+  ).find((p) => p.category === "lodging" && inChosenDestination(p));
 
   const queuedIds = new Set(mustVisitPlaces.map((p) => p.id));
   const interestPlaces = attractions

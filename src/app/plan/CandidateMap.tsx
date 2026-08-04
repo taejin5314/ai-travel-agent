@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { googleMapsBrowserKey } from "@/lib/config";
 import type { CandidateView } from "./formPreferences";
 
@@ -27,6 +27,7 @@ export function CandidateMap({
   onToggle: (id: string) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const [authFailed, setAuthFailed] = useState(false);
   // Held in a ref so re-renders reuse the map instead of building a new one,
   // which would count as another billed map load every time a pin is tapped.
   const map = useRef<unknown>(null);
@@ -37,6 +38,13 @@ export function CandidateMap({
     if (apiKey === undefined || container.current === null) {
       return;
     }
+    // Maps JS serves the script to anyone and only authenticates when a Map is
+    // constructed, so a wrong key or a blocked referrer shows up as a silent
+    // grey box. `gm_authFailure` is Google's documented hook for exactly that;
+    // without it the failure is invisible outside the browser console.
+    (globalThis as { gm_authFailure?: () => void }).gm_authFailure = () => {
+      setAuthFailed(true);
+    };
     let cancelled = false;
 
     void (async () => {
@@ -85,6 +93,16 @@ export function CandidateMap({
 
   if (apiKey === undefined) {
     return null;
+  }
+  if (authFailed) {
+    // The list below still works, so this is a notice rather than an error
+    // state — but it must be visible: a grey box teaches nobody anything.
+    return (
+      <p className="mb-3 rounded-xl bg-amber-500/10 px-4 py-3 text-xs text-amber-700 dark:text-amber-400">
+        지도를 불러오지 못했습니다. 브라우저 키의 리퍼러 제한과 Maps JavaScript
+        API 사용 설정을 확인해주세요. 아래 목록으로 계속 고르실 수 있습니다.
+      </p>
+    );
   }
   return (
     <div
