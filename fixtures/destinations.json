@@ -1,0 +1,16 @@
+[
+  {
+    "id": "osaka",
+    "name": "오사카",
+    "searchName": "Osaka, Japan",
+    "country": "JP",
+    "bounds": { "lat": [34.3, 34.85], "lng": [135.25, 135.75] }
+  },
+  {
+    "id": "kyoto",
+    "name": "교토",
+    "searchName": "Kyoto, Japan",
+    "country": "JP",
+    "bounds": { "lat": [34.85, 35.2], "lng": [135.55, 135.95] }
+  }
+]

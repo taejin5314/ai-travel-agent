@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { TimeStringSchema } from "@/domain/schema/time";
 
-export const PlaceAreaSchema = z.enum(["osaka", "kyoto"]);
+/**
+ * The destination this place belongs to. A registry id rather than an enum:
+ * the set of destinations is data (fixtures/destinations.json), so widening
+ * coverage must not require a schema change. Validity against the registry is
+ * enforced at the provider boundary, where places are created.
+ */
+export const PlaceAreaSchema = z.string().min(1);
 
 export const PlaceCategorySchema = z.enum([
   "sight",

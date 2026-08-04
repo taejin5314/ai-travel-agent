@@ -943,3 +943,89 @@ describe("planTrip cuisine preferences", () => {
     expect(absent).toEqual(empty);
   });
 });
+
+describe("planTrip beyond Osaka and Kyoto", () => {
+  // The point of the destination registry: a third city needs no code change.
+  // If this test ever requires touching src/, the enum was only renamed.
+  const paris = { open: "09:00", close: "20:00" };
+  const parisPlaces: Place[] = [
+    {
+      id: "louvre",
+      name: "Louvre",
+      area: "paris",
+      category: "culture",
+      location: { lat: 48.8606, lng: 2.3376 },
+      openingHours: [paris, paris, paris, paris, paris, paris, paris],
+      typicalVisitMinutes: 120,
+      rating: 4.7,
+      reviewCount: 300000,
+    },
+    {
+      id: "orsay",
+      name: "Musée d'Orsay",
+      area: "paris",
+      category: "culture",
+      location: { lat: 48.86, lng: 2.3266 },
+      openingHours: [paris, paris, paris, paris, paris, paris, paris],
+      typicalVisitMinutes: 90,
+      rating: 4.7,
+      reviewCount: 100000,
+    },
+    {
+      id: "bouillon",
+      name: "Bouillon Chartier",
+      area: "paris",
+      category: "restaurant",
+      location: { lat: 48.8719, lng: 2.3432 },
+      openingHours: [paris, paris, paris, paris, paris, paris, paris],
+      typicalVisitMinutes: 60,
+      rating: 4.3,
+      reviewCount: 40000,
+    },
+  ];
+
+  it("plans a trip in a destination the code has never heard of", async () => {
+    const result = await planTrip(
+      {
+        ...preferences,
+        endDate: preferences.startDate,
+        lodging: { name: "Hôtel", area: "Paris" },
+        mustVisit: ["Louvre"],
+        interests: [],
+      },
+      {
+        places: new MockPlacesProvider(parisPlaces),
+        routes: new MockRoutesProvider(),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
+      expect(ids).toContain("louvre");
+      expect(result.places.every((p) => p.area === "paris")).toBe(true);
+    }
+  });
+
+  it("still clusters by destination when two are in play", async () => {
+    const mixed = [...parisPlaces, ...fixture];
+    const result = await planTrip(
+      { ...preferences, mustVisit: [], interests: [], pace: "relaxed" },
+      {
+        places: new MockPlacesProvider(mixed),
+        routes: new MockRoutesProvider(),
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const areaById = new Map(mixed.map((p) => [p.id, p.area]));
+      for (const day of result.itinerary.days) {
+        const areas = new Set(
+          day.activities
+            .map((a) => areaById.get(a.placeId))
+            .filter((area) => area !== undefined),
+        );
+        expect(areas.size).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});
