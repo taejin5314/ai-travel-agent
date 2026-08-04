@@ -1,5 +1,6 @@
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 import { DayMap } from "./DayMap";
+import { formatCost, hasFigure, totalCost } from "./cost";
 import {
   constraintLabel,
   cuisineLabel,
@@ -19,19 +20,56 @@ const DAY_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "UTC",
 });
 
+/**
+ * The trip total, and — just as important — what it leaves out. Google has no
+ * admission price for attractions and returns no transit for Japan at all, so
+ * calling a meals-only figure "trip cost" would be the same class of lie as
+ * labelling a walk as a train ride.
+ */
+function CostSummary({ days }: { days: ItineraryViewDay[] }) {
+  const total = totalCost(days);
+  if (total === undefined || !hasFigure(total)) {
+    return null;
+  }
+  return (
+    <div className="rounded-xl bg-black/5 px-4 py-3 text-sm dark:bg-white/10">
+      <p className="flex justify-between gap-3">
+        <span className="font-medium">예상 식사 비용</span>
+        <span className="tabular-nums">{formatCost(total)}</span>
+      </p>
+      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+        일정에 포함된 식당 {total.pricedStops}곳의 1인 가격대를 인원수만큼
+        더한 값입니다.
+        {total.unpricedStops > 0 &&
+          ` 가격 정보가 없는 ${total.unpricedStops}곳은 빠져 있습니다.`}{" "}
+        관광지 입장료와 교통비는 포함되지 않았습니다 — 제공되는 데이터가
+        없습니다.
+      </p>
+    </div>
+  );
+}
+
 function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-lg font-semibold">생성된 일정</h2>
+      <CostSummary days={days} />
       <ol className="flex flex-col gap-3">
         {days.map((day, index) => (
           <li
             key={day.date}
             className="rounded-xl border border-black/10 p-4 dark:border-white/15"
           >
-            <p className="mb-2 text-sm font-medium">
-              {index + 1}일차 ·{" "}
-              {DAY_FORMATTER.format(new Date(`${day.date}T00:00:00Z`))}
+            <p className="mb-2 flex justify-between gap-3 text-sm font-medium">
+              <span>
+                {index + 1}일차 ·{" "}
+                {DAY_FORMATTER.format(new Date(`${day.date}T00:00:00Z`))}
+              </span>
+              {day.cost !== undefined && hasFigure(day.cost) && (
+                <span className="font-normal tabular-nums text-zinc-600 dark:text-zinc-400">
+                  식사 {formatCost(day.cost)}
+                </span>
+              )}
             </p>
             {day.items.length === 0 ? (
               <p className="text-sm text-zinc-500">자유 시간</p>
@@ -100,6 +138,11 @@ function ItineraryList({ days }: { days: ItineraryViewDay[] }) {
                         {item.rating !== undefined && (
                           <span className="ml-1 text-xs text-zinc-500">
                             ★ {item.rating.toFixed(1)}
+                          </span>
+                        )}
+                        {item.priceRange !== undefined && (
+                          <span className="ml-1 text-xs text-zinc-500">
+                            {formatCost({ ...item.priceRange, pricedStops: 1, unpricedStops: 0 })}
                           </span>
                         )}
                       </span>

@@ -106,7 +106,7 @@ export async function submitTripPreferences(
     status: "success",
     data: parsed.data,
     dataSource: ports.dataSource,
-    itinerary: buildItineraryView(plan.itinerary, catalog),
+    itinerary: buildItineraryView(plan.itinerary, catalog, parsed.data.partySize),
     planId: saved.id,
   };
 }
