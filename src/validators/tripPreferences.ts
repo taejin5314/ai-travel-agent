@@ -1,4 +1,5 @@
 import { serviceableDestinations } from "@/domain/coverage";
+import { cuisineOptionsFor } from "@/domain/destination";
 import type { TripPreferences } from "@/domain/schema/tripPreferences";
 
 export const MAX_TRIP_LENGTH_DAYS = 30;
@@ -41,6 +42,19 @@ export function validateTripPreferences(
   );
   if (unavailable.length > 0) {
     errors.push(`Unavailable destinations: ${unavailable.join(", ")}.`);
+  }
+
+  // Nothing may be requested that the planner will not honour (the same rule
+  // as constraints): asking for kaiseki on a Paris trip would otherwise be
+  // accepted and then quietly do nothing.
+  const offered = new Set(
+    cuisineOptionsFor(input.destinations).map((cuisine) => cuisine.id),
+  );
+  const unoffered = (input.cuisines ?? []).filter((id) => !offered.has(id));
+  if (unoffered.length > 0) {
+    errors.push(
+      `Cuisines not offered by the chosen destinations: ${unoffered.join(", ")}.`,
+    );
   }
 
   const seen = new Set<string>();

@@ -2,10 +2,10 @@ import {
   allDestinations,
   destinationAt,
   findDestination,
+  cuisineQueryFor,
   registryBounds,
   type Destination,
 } from "@/domain/destination";
-import type { Cuisine } from "@/domain/schema/cuisine";
 import { PlaceSchema, type Place } from "@/domain/schema/place";
 import type { PlaceArea, PlacesPort } from "@/providers/ports";
 import {
@@ -77,21 +77,6 @@ const VISIT_MINUTES_BY_CATEGORY: Record<Place["category"], number> = {
   entertainment: 180,
   restaurant: 60,
   lodging: 1,
-};
-
-/**
- * Search phrases per cuisine, `{city}` filled in per destination. Phrases rather
- * than Google place types because the type vocabulary has no word for
- * okonomiyaki or kaiseki — a text search finds what a type filter cannot.
- */
-const CUISINE_QUERIES: Record<Cuisine, string> = {
-  ramen: "famous ramen restaurants in {city}",
-  sushi: "best sushi restaurants in {city}",
-  okonomiyaki: "okonomiyaki and takoyaki restaurants in {city}",
-  "udon-soba": "udon and soba restaurants in {city}",
-  yakiniku: "yakiniku and wagyu restaurants in {city}",
-  kaiseki: "traditional kaiseki restaurants in {city}",
-  cafe: "popular cafes and dessert shops in {city}",
 };
 
 /**
@@ -447,7 +432,7 @@ export class GooglePlacesProvider implements PlacesPort {
   }
 
   async findRestaurants(
-    cuisines: readonly Cuisine[],
+    cuisines: readonly string[],
     area?: PlaceArea,
   ): Promise<Place[]> {
     if (cuisines.length === 0) {
@@ -455,13 +440,12 @@ export class GooglePlacesProvider implements PlacesPort {
     }
     const areas: PlaceArea[] =
       area !== undefined ? [area] : allDestinations().map((d) => d.id);
-    const queries = cuisines.flatMap((cuisine) =>
-      areas.map((a) =>
-        CUISINE_QUERIES[cuisine].replace(
-          "{city}",
-          findDestination(a)?.searchName ?? a,
-        ),
-      ),
+    // A cuisine only searched where it is offered: asking for kaiseki on an
+    // Osaka+Kyoto trip must not run "kaiseki restaurants in Osaka".
+    const queries = areas.flatMap((a) =>
+      cuisines
+        .map((cuisine) => cuisineQueryFor(a, cuisine))
+        .filter((query): query is string => query !== undefined),
     );
     const results = await Promise.all(
       queries.map((query) => this.searchText(query)),

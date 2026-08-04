@@ -331,3 +331,45 @@ describe("GooglePlacesProvider generic types", () => {
     expect(vague.typicalVisitMinutes).toBe(60);
   });
 });
+
+describe("GooglePlacesProvider cuisine queries", () => {
+  function capturingProvider() {
+    const queries: string[] = [];
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: async (_url, init) => {
+        const body = JSON.parse((init as { body: string }).body) as {
+          textQuery: string;
+        };
+        queries.push(body.textQuery);
+        return { ok: true, status: 200, json: async () => ({ places: [] }) };
+      },
+    });
+    return { provider, queries };
+  }
+
+  it("searches a cuisine only where the destination offers it", async () => {
+    // Regression: the cuisine list was a global enum, so an Osaka+Kyoto trip
+    // asking for kaiseki ran "kaiseki restaurants in Osaka".
+    const { provider, queries } = capturingProvider();
+    await provider.findRestaurants(["kaiseki"]);
+
+    expect(queries).toEqual([
+      "traditional kaiseki restaurants in Kyoto, Japan",
+    ]);
+  });
+
+  it("runs a shared cuisine once per destination that offers it", async () => {
+    const { provider, queries } = capturingProvider();
+    await provider.findRestaurants(["ramen"], "osaka");
+
+    expect(queries).toEqual(["famous ramen restaurants in Osaka, Japan"]);
+  });
+
+  it("searches nothing when no chosen destination offers the cuisine", async () => {
+    const { provider, queries } = capturingProvider();
+    await provider.findRestaurants(["kaiseki"], "paris");
+
+    expect(queries).toEqual([]);
+  });
+});
