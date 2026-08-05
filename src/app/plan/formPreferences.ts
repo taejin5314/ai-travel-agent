@@ -247,6 +247,8 @@ export type PlanFormState =
       dataSource?: "google" | "mock";
       /** Set once the plan is stored; the share link is built from it. */
       planId?: string;
+      /** Names for the picked place ids, resolved where the catalog lives. */
+      pickedPlaceNames?: string[];
     }
   | { status: "error"; errors: string[]; values: PlanFormValues };
 
