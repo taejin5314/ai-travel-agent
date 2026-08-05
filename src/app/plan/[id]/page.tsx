@@ -26,6 +26,9 @@ export default async function SavedPlanPage({
           data={plan.preferences}
           itinerary={buildItineraryView(plan.itinerary, plan.places, plan.preferences.partySize)}
           dataSource={plan.dataSource}
+          pickedPlaceNames={(plan.preferences.selectedPlaceIds ?? []).map(
+            (id) => plan.places.find((place) => place.id === id)?.name ?? id,
+          )}
         />
 
         <Link

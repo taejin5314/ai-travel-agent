@@ -169,8 +169,11 @@ export function PlanSummary({
   planningNotice,
   dataSource,
   planId,
+  pickedPlaceNames,
 }: {
   data: TripPreferences;
+  /** Names for preferences.selectedPlaceIds, resolved server-side. */
+  pickedPlaceNames?: readonly string[];
   itinerary?: ItineraryViewDay[];
   planningNotice?: string;
   dataSource?: "google" | "mock";
@@ -204,8 +207,13 @@ export function PlanSummary({
           <dd>{data.partySize}명</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-zinc-600 dark:text-zinc-400">필수 방문지</dt>
-          <dd className="text-right">{data.mustVisit.join(", ")}</dd>
+          <dt className="text-zinc-600 dark:text-zinc-400">직접 고른 장소</dt>
+          <dd className="text-right">
+            {/* Picked places arrive as ids; the action resolves them to names
+                because only the server has the catalog. Typed must-visits are
+                still shown, so plans saved before the picker read correctly. */}
+            {[...(pickedPlaceNames ?? []), ...data.mustVisit].join(", ") || "-"}
+          </dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-600 dark:text-zinc-400">관심사</dt>

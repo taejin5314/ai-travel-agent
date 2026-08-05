@@ -143,5 +143,8 @@ export async function submitTripPreferences(
     dataSource: ports.dataSource,
     itinerary: buildItineraryView(plan.itinerary, catalog, parsed.data.partySize),
     planId: saved.id,
+    pickedPlaceNames: (parsed.data.selectedPlaceIds ?? []).map(
+      (id) => catalog.find((place) => place.id === id)?.name ?? id,
+    ),
   };
 }

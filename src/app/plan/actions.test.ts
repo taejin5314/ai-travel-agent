@@ -313,3 +313,43 @@ describe("submitTripPreferences with minimal input", () => {
     }
   });
 });
+
+describe("picked places in the summary", () => {
+  it("resolves picked ids to names for display", async () => {
+    // The summary only has ids; the catalog lives on the server, so the
+    // action resolves them. Rendering the raw ids would be worse than the
+    // blank row this replaces.
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData({
+        startDate: "2026-08-01",
+        endDate: "2026-08-02",
+        destinations: ["osaka"],
+        partySize: "1",
+        pace: "balanced",
+        selectedPlaceIds: ["osaka-castle"],
+      }),
+    );
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.pickedPlaceNames).toEqual(["Osaka Castle"]);
+    }
+  });
+
+  it("reports no picked names when nothing was picked", async () => {
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData({
+        startDate: "2026-08-01",
+        endDate: "2026-08-02",
+        destinations: ["osaka"],
+        partySize: "1",
+        pace: "balanced",
+      }),
+    );
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.pickedPlaceNames).toEqual([]);
+    }
+  });
+});

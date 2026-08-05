@@ -41,6 +41,7 @@ export function PlanForm() {
         planningNotice={state.planningNotice}
         dataSource={state.dataSource}
         planId={state.planId}
+        pickedPlaceNames={state.pickedPlaceNames}
       />
     );
   }
