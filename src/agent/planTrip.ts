@@ -1,3 +1,4 @@
+import { bestOrder } from "@/agent/orderDay";
 import { matchesExactly } from "@/domain/placeMatch";
 import type { TripConstraint } from "@/domain/schema/constraint";
 import type { Activity, DayPlan, Itinerary } from "@/domain/schema/itinerary";
@@ -441,10 +442,23 @@ export async function planTrip(
     return null;
   }
 
-  const days: DayPlan[] = [];
-  for (const date of enumerateDates(preferences.startDate, preferences.endDate)) {
+  /**
+   * Builds one day. Mutates `queue` and `usedRestaurantIds`, so a caller that
+   * wants to try several orders must snapshot and restore around each attempt.
+   *
+   * `forcedOrder` replaces the priority scan with an explicit sequence, which
+   * is how an optimised order is replayed through exactly the same scheduling
+   * rules that produced the greedy one. Reordering the finished activities
+   * instead would have to re-derive every start time, meal slot and travel
+   * leg — and would drift from the rules the moment either changed.
+   */
+  async function planDay(
+    date: string,
+    forcedOrder?: readonly string[],
+  ): Promise<{ activities: Activity[]; chosen: Place[]; travel: number }> {
     const dayOfWeek = weekdayIndex(date);
     const activities: Activity[] = [];
+    const chosen: Place[] = [];
     let clock = bounds.dayStart;
     let previous: Place | undefined = lodgingPlace;
     let attractionCount = 0;
@@ -480,6 +494,12 @@ export async function planTrip(
       // between cities just because that is the order they were typed in.
       const scanOrder = queue
         .map((place, index) => {
+          if (forcedOrder !== undefined) {
+            // Replaying a chosen order: anything outside it goes last, so a
+            // day can still fill up if the forced places stop fitting.
+            const position = forcedOrder.indexOf(place.id);
+            return { index, priority: position < 0 ? forcedOrder.length : position };
+          }
           const mustVisitRank = mustVisitIds.has(place.id) ? 0 : 2;
           const areaRank =
             previous !== undefined && place.area === previous.area ? 0 : 1;
@@ -512,6 +532,7 @@ export async function planTrip(
           ...(travel !== undefined && { travel }),
         });
         queue.splice(i, 1);
+        chosen.push(candidate);
         previous = candidate;
         clock = end;
         attractionCount += 1;
@@ -541,7 +562,49 @@ export async function planTrip(
       clock = dinner.end;
     }
 
-    days.push({ date, activities });
+    // Every leg of the finished day, meals included. Counting only the
+    // attraction hops optimised a proxy: reordering moves where meals land,
+    // and a day that saves ten minutes between museums but adds twenty
+    // getting to dinner is not a shorter day.
+    const travel = activities.reduce(
+      (total, activity) => total + (activity.travel?.minutes ?? 0),
+      0,
+    );
+    return { activities, chosen, travel };
+  }
+
+  const days: DayPlan[] = [];
+  for (const date of enumerateDates(preferences.startDate, preferences.endDate)) {
+    const queueSnapshot = [...queue];
+    const usedSnapshot = new Set(usedRestaurantIds);
+    const restore = () => {
+      queue.length = 0;
+      queue.push(...queueSnapshot);
+      usedRestaurantIds.clear();
+      for (const id of usedSnapshot) {
+        usedRestaurantIds.add(id);
+      }
+    };
+
+    const greedy = await planDay(date);
+    if (greedy.chosen.length < 2) {
+      days.push({ date, activities: greedy.activities });
+      continue;
+    }
+
+    // An order is only a candidate if it still fits every place the greedy
+    // pass managed to fit. Saving travel by dropping a stop is not a better
+    // route, it is a smaller day.
+    const best = await bestOrder(greedy.chosen, async (order) => {
+      restore();
+      const attempt = await planDay(date, order.map((place) => place.id));
+      return attempt.chosen.length === greedy.chosen.length
+        ? attempt.travel
+        : undefined;
+    });
+    restore();
+    const final = await planDay(date, best.map((place) => place.id));
+    days.push({ date, activities: final.activities });
   }
 
   const unscheduledMustVisits = queue.filter((p) =>
