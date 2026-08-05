@@ -1,4 +1,5 @@
 import { bestOrder } from "@/agent/orderDay";
+import { spreadDay } from "@/agent/spreadDay";
 import { matchesExactly } from "@/domain/placeMatch";
 import type { TripConstraint } from "@/domain/schema/constraint";
 import type { Activity, DayPlan, Itinerary } from "@/domain/schema/itinerary";
@@ -573,6 +574,18 @@ export async function planTrip(
     return { activities, chosen, travel };
   }
 
+  /**
+   * Same stops, later starts where there is room. A relaxed day was finishing
+   * its sightseeing before noon and then waiting hours for dinner; the count
+   * was right and the placement was not.
+   */
+  const placeById = new Map(catalog.map((place) => [place.id, place]));
+  for (const place of cuisineMatches) {
+    placeById.set(place.id, place);
+  }
+  const spreadFinished = (date: string, activities: Activity[]) =>
+    spreadDay(activities, placeById, weekdayIndex(date));
+
   const days: DayPlan[] = [];
   for (const date of enumerateDates(preferences.startDate, preferences.endDate)) {
     const queueSnapshot = [...queue];
@@ -588,7 +601,7 @@ export async function planTrip(
 
     const greedy = await planDay(date);
     if (greedy.chosen.length < 2) {
-      days.push({ date, activities: greedy.activities });
+      days.push({ date, activities: spreadFinished(date, greedy.activities) });
       continue;
     }
 
@@ -604,7 +617,7 @@ export async function planTrip(
     });
     restore();
     const final = await planDay(date, best.map((place) => place.id));
-    days.push({ date, activities: final.activities });
+    days.push({ date, activities: spreadFinished(date, final.activities) });
   }
 
   const unscheduledMustVisits = queue.filter((p) =>

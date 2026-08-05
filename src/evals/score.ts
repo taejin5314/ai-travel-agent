@@ -24,6 +24,11 @@ export type Scorecard = {
   crossAreaHops: number;
   /** Waiting time not explained by the travel leg that follows it. Lower is better. */
   idleMinutes: number;
+  /**
+   * The longest single wait. Total idle hides shape: three easy pauses and
+   * one dead afternoon add up the same, and only one of them is a bad day.
+   */
+  longestIdleMinutes: number;
   /** Distinct lunch/dinner windows filled, counted once each per day. */
   mealSlotsFilled: number;
   /** Lunch + dinner for every REQUESTED day, so a dropped day lowers the score. */
@@ -92,6 +97,7 @@ export function scoreItinerary(
 
   let crossAreaHops = 0;
   let idleMinutes = 0;
+  let longestIdleMinutes = 0;
   let mealSlotsFilled = 0;
   let travelMinutes = 0;
   let walkingMinutes = 0;
@@ -131,6 +137,7 @@ export function scoreItinerary(
         const gap =
           timeToMinutes(activity.start) - previousEnd - (activity.travel?.minutes ?? 0);
         idleMinutes += Math.max(0, gap);
+        longestIdleMinutes = Math.max(longestIdleMinutes, gap);
       }
       previous = place ?? previous;
       previousEnd = timeToMinutes(activity.end);
@@ -145,6 +152,7 @@ export function scoreItinerary(
     activities: itinerary.days.reduce((n, day) => n + day.activities.length, 0),
     crossAreaHops,
     idleMinutes,
+    longestIdleMinutes,
     mealSlotsFilled,
     // Derived from the request, not the output: a planner that drops a day
     // would otherwise shrink the denominator along with the numerator and
