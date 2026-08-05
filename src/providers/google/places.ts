@@ -165,6 +165,24 @@ export interface GooglePlacesProviderOptions {
  * `tourist_attraction` with `market` behind it — so a generic primary type
  * must not outrank a specific secondary one.
  */
+/**
+ * Businesses that sell an experience rather than being a place to go. They
+ * arrive with real ratings and thousands of reviews — "Secret Food Tours
+ * Paris" ranked first among Paris attractions at 5.0 from 4,070 — so nothing
+ * downstream would ever demote them.
+ *
+ * Dropped here rather than ranked lower: the problem is not that a tour is a
+ * weak destination, it is that it is not a destination.
+ */
+const NOT_A_DESTINATION = new Set(["tour_agency", "travel_agency"]);
+
+function isService(types: readonly string[], primaryType?: string): boolean {
+  return (
+    (primaryType !== undefined && NOT_A_DESTINATION.has(primaryType)) ||
+    types.some((type) => NOT_A_DESTINATION.has(type))
+  );
+}
+
 const GENERIC_TYPES = new Set([
   "tourist_attraction",
   "point_of_interest",
@@ -340,6 +358,11 @@ export class GooglePlacesProvider implements PlacesPort {
       return null;
     }
     const types = googlePlace.types ?? [];
+    if (isService(types, googlePlace.primaryType)) {
+      // categoryOf would call this a sight: its fallback turns "unrecognised"
+      // into "landmark", which is how a travel agency became a destination.
+      return null;
+    }
     const category = categoryOf(types, googlePlace.primaryType);
     const candidate = {
       id: googlePlace.id,

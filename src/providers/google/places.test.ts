@@ -373,3 +373,48 @@ describe("GooglePlacesProvider cuisine queries", () => {
     expect(queries).toEqual([]);
   });
 });
+
+describe("GooglePlacesProvider service listings", () => {
+  const tourAgency = {
+    id: "gp-tour",
+    displayName: { text: "Secret Food Tours Paris" },
+    location: { latitude: 34.6873, longitude: 135.5262 },
+    rating: 5,
+    userRatingCount: 4070,
+    primaryType: "tour_agency",
+    types: ["tour_agency", "travel_agency", "point_of_interest", "service"],
+  };
+
+  async function found(raw: unknown) {
+    const provider = new GooglePlacesProvider({
+      apiKey: "k",
+      fetchFn: fakeFetch({ places: [raw] }),
+    });
+    return provider.findPlacesByName("x");
+  }
+
+  it("drops a tour operator rather than calling it a sight", async () => {
+    // It arrives with a real 5.0 from 4,070 reviews and ranked first among
+    // Paris attractions. Nothing downstream would ever demote it, because
+    // the rating is genuine — it simply is not a place to go.
+    expect(await found(tourAgency)).toEqual([]);
+  });
+
+  it("sees a service type hiding behind a generic primary type", async () => {
+    const disguised = { ...tourAgency, primaryType: "tourist_attraction" };
+    expect(await found(disguised)).toEqual([]);
+  });
+
+  it("leaves real attractions alone", async () => {
+    const monument = {
+      ...tourAgency,
+      id: "gp-arc",
+      displayName: { text: "에투알 개선문" },
+      primaryType: "monument",
+      types: ["monument", "tourist_attraction", "point_of_interest"],
+    };
+    const places = await found(monument);
+    expect(places).toHaveLength(1);
+    expect(places[0].category).toBe("sight");
+  });
+});
