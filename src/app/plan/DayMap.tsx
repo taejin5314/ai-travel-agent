@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { plotRoute } from "@/lib/routeShape";
 import type { ItineraryViewDay } from "./formPreferences";
 
@@ -11,12 +14,35 @@ const SIZE = 100;
  * doubles back" is readable at a glance, which the list alone never showed.
  */
 export function DayMap({ items }: { items: ItineraryViewDay["items"] }) {
+  const [mapFailed, setMapFailed] = useState(false);
   const located = items.filter((item) => item.location !== undefined);
   // One stop has no route to show, and zero has nothing at all. If any stop
   // is missing coordinates the numbering would drift out of step with the
   // list beside it, and a map whose numbers lie is worse than no map.
   if (items.length < 2 || located.length !== items.length) {
     return null;
+  }
+
+  const coords = located.map((item) => item.location as { lat: number; lng: number });
+
+  // A real map first: the shape answers "does this day double back", but only
+  // streets answer "where am I". The proxy keeps the server key server-side,
+  // and an unavailable Static Maps API falls back to the shape rather than
+  // leaving a broken image.
+  if (!mapFailed) {
+    return (
+      /* Proxied bytes from a route handler, not a static asset: next/image
+         would try to optimise a URL it cannot fetch at build time. */
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`/api/day-map?points=${encodeURIComponent(
+          coords.map((c) => `${c.lat},${c.lng}`).join("|"),
+        )}`}
+        alt={`이동 순서: ${located.map((item) => item.placeName).join(" → ")}`}
+        onError={() => setMapFailed(true)}
+        className="mb-3 w-full rounded-xl bg-black/[0.03] dark:bg-white/[0.06]"
+      />
+    );
   }
 
   const points = plotRoute(
