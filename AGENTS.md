@@ -22,8 +22,14 @@ day-by-day itinerary from real Google Places/Routes data, scored by the eval
 scenarios in `src/evals/`. No model is involved anywhere yet.
 
 **Still gated — do not implement until an issue explicitly asks:**
-authentication, payments, real LLM calls, and any real (non in-memory)
-database. `src/providers/llm/stub.ts` throws by design.
+authentication, payments, and real LLM calls. `src/providers/llm/stub.ts`
+throws by design.
+
+**Ungated on 2026-08-04 (#85):** a real database. Saved plans now live in
+Postgres behind `ItineraryStore`, because a share link that dies with the
+server process is a shipped feature that does not work. The gate covered
+*adding* persistence; it never covered user accounts or deleting user data,
+which remain gated above and under §3.
 
 ---
 
@@ -43,8 +49,9 @@ src/
                 mock/ · google/ (live) · llm/ (stub that throws).
   agent/        Planner +, later, AI workflow and prompts. Receives providers
                 via ports (DI). Delegates time/conflict decisions to validators.
-  db/           Data layer behind ItineraryStore. In-memory only; a real
-                database is still gated (§1).
+  db/           Data layer behind ItineraryStore. Postgres in deployment,
+                in-memory when no database is configured. Both adapters must
+                pass storeContract.ts.
   evals/        Scenarios, scorer, and committed baseline scorecard.
   lib/          Shared utils (config; time zones and logging as needed).
 scripts/        run-scenario.ts (offline evals) · smoke-google.ts and

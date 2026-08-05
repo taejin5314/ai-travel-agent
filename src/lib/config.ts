@@ -31,3 +31,23 @@ export function googleMapsApiKey(): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * Where saved plans live. A connection string carries a password, so it is
+ * read here and passed straight to the driver — never logged, never returned
+ * to a caller that renders (AGENTS.md §3.7).
+ *
+ * Absent is a supported state: `pnpm dev` and CI fall back to the in-memory
+ * store and need no database at all. Vercel's Postgres integrations set
+ * `POSTGRES_URL`; `DATABASE_URL` is the same thing under the name most other
+ * hosts use, and accepting both is cheaper than a support question.
+ */
+export function databaseUrl(): string | undefined {
+  for (const name of ["POSTGRES_URL", "DATABASE_URL"] as const) {
+    const value = process.env[name];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}

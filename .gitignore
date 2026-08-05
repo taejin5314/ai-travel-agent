@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template, which is the only record of what the app needs to
+# run. It carries names and instructions, never values — check that before
+# touching it. Every real .env stays ignored by the line above.
+!.env.example
 
 # vercel
 .vercel

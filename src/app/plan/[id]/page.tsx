@@ -4,6 +4,18 @@ import { itineraryStore } from "@/db/store";
 import { buildItineraryView } from "../formPreferences";
 import { PlanSummary } from "../PlanSummary";
 
+/**
+ * Rendered per request, never prerendered.
+ *
+ * `dynamicParams` defaults to true, so a path not listed in
+ * `generateStaticParams` is "generated at request time" — and then cached.
+ * This page reads a database but no dynamic API, so Next would happily keep
+ * the first render of each id. For a saved plan that is harmless; for a *miss*
+ * it is not. Anyone who opens a share link a moment before the plan is written
+ * — or during one bad database call — would pin a 404 to that url for good.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function SavedPlanPage({
   params,
 }: {
