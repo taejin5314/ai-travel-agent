@@ -302,12 +302,17 @@ export function buildTripPreferencesCandidate(formData: FormData): unknown {
   return {
     startDate: getString(formData, "startDate"),
     endDate: getString(formData, "endDate"),
-    lodging: {
-      name: getString(formData, "lodgingName"),
-      area: getString(formData, "lodgingArea"),
-    },
+    ...(getString(formData, "lodgingName") !== "" && {
+      lodging: {
+        name: getString(formData, "lodgingName"),
+        area: getString(formData, "lodgingArea") || "-",
+      },
+    }),
     destinations,
-    partySize: Number(getString(formData, "partySize")),
+    partySize: Number(getString(formData, "partySize") || "1"),
+    ...(getString(formData, "lodgingPlaceId") !== "" && {
+      lodgingPlaceId: getString(formData, "lodgingPlaceId"),
+    }),
     mustVisit: splitEntries(getString(formData, "mustVisit")),
     interests: splitEntries(getString(formData, "interests")),
     pace: getString(formData, "pace"),

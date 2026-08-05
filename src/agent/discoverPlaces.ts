@@ -12,6 +12,12 @@ import type { PlacesPort } from "@/providers/ports";
 export type Discovery = {
   attractions: Place[];
   restaurants: Place[];
+  /**
+   * Somewhere to sleep. Its own list because it is chosen once for the whole
+   * trip, not per day — and because typing a lodging name is what resolved a
+   * Seoul trip to a hotel in Kyoto.
+   */
+  lodging: Place[];
 };
 
 export type DiscoverOptions = {
@@ -84,7 +90,7 @@ export async function discoverPlaces(
       .slice(0, limit);
 
   return {
-    // Lodging is where you sleep, not somewhere to choose to go.
+    // Lodging is offered separately, never mixed into the day is stops.
     attractions: ranked(
       unique.filter(
         (place) => place.category !== "restaurant" && place.category !== "lodging",
@@ -93,5 +99,6 @@ export async function discoverPlaces(
     restaurants: ranked(
       unique.filter((place) => place.category === "restaurant"),
     ),
+    lodging: ranked(unique.filter((place) => place.category === "lodging")),
   };
 }

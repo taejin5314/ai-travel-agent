@@ -225,6 +225,31 @@ function legMinutes(leg: TravelLeg | undefined): number {
 }
 
 /**
+ * The lodging to anchor days at, if any. Prefers the picked id — exact by
+ * construction — and only falls back to searching a typed name.
+ */
+async function resolveLodging(
+  places: PlacesPort,
+  preferences: TripPreferences,
+  allowed: (place: Place) => boolean,
+): Promise<Place | undefined> {
+  const pickedId = preferences.lodgingPlaceId;
+  if (pickedId !== undefined) {
+    const picked = await places.getPlaceById(pickedId);
+    if (picked !== null && allowed(picked)) {
+      return picked;
+    }
+  }
+  const typed = preferences.lodging?.name;
+  if (typed === undefined) {
+    return undefined;
+  }
+  return (await places.findPlacesByName(typed)).find(
+    (place) => place.category === "lodging" && allowed(place),
+  );
+}
+
+/**
  * Deterministic planner v0. Greedy schedule over the mock catalog:
  * must-visit places first, then interest-matching categories, then the rest.
  * Every decision is plain TypeScript; the result must still pass
@@ -319,11 +344,13 @@ export async function planTrip(
   const restaurants = [...restaurantsById.values()].sort(byRatingDesc);
   const usedRestaurantIds = new Set<string>();
 
-  // Anchor days at the lodging when the entered name matches the catalog.
-  // Free text stays supported: an unknown lodging just plans without anchor.
-  const lodgingPlace = (
-    await ports.places.findPlacesByName(preferences.lodging.name)
-  ).find((p) => p.category === "lodging" && inChosenDestination(p));
+  // Anchor days at the lodging. A picked id is exact; a typed name is a
+  // search and therefore ambiguous, which is how "호텔" on a Seoul trip
+  // resolved to a hotel in Kyoto. No lodging at all is fine — days simply
+  // start at the first stop.
+  const lodgingPlace = await resolveLodging(ports.places, preferences, (place) =>
+    inChosenDestination(place),
+  );
 
   const queuedIds = new Set(mustVisitPlaces.map((p) => p.id));
   const interestPlaces = attractions

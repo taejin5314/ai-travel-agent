@@ -53,11 +53,15 @@ export async function discoverCandidates(input: {
   destinations: readonly string[];
   cuisines?: readonly string[];
   limit?: number;
-}): Promise<{ attractions: CandidateView[]; restaurants: CandidateView[] }> {
+}): Promise<{
+  attractions: CandidateView[];
+  restaurants: CandidateView[];
+  lodging: CandidateView[];
+}> {
   const available = new Set(serviceableDestinations().map((entry) => entry.id));
   const destinations = input.destinations.filter((id) => available.has(id));
   if (destinations.length === 0) {
-    return { attractions: [], restaurants: [] };
+    return { attractions: [], restaurants: [], lodging: [] };
   }
   const found = await discoverPlaces(ports.places, destinations, {
     ...(input.cuisines !== undefined && { cuisines: input.cuisines }),
@@ -66,6 +70,7 @@ export async function discoverCandidates(input: {
   return {
     attractions: found.attractions.map(toCandidateView),
     restaurants: found.restaurants.map(toCandidateView),
+    lodging: found.lodging.map(toCandidateView),
   };
 }
 

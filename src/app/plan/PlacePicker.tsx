@@ -24,6 +24,8 @@ export function PlacePicker({
   cuisines: readonly string[];
 }) {
   const [candidates, setCandidates] = useState<CandidateView[]>([]);
+  const [lodging, setLodging] = useState<CandidateView[]>([]);
+  const [stay, setStay] = useState<string>("");
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +49,7 @@ export function PlacePicker({
       .then((found) => {
         if (!cancelled) {
           setCandidates([...found.attractions, ...found.restaurants]);
+          setLodging(found.lodging);
         }
       })
       .finally(() => {
@@ -86,6 +89,35 @@ export function PlacePicker({
         고른 장소는 일정에 반드시 포함됩니다. 고르지 않으면 평점과 관심사를
         기준으로 저희가 채웁니다.
       </p>
+
+      {lodging.length > 0 && (
+        <div className="mb-2 flex flex-col gap-1">
+          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            숙소 (선택하면 매일 여기서 출발합니다)
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {lodging.slice(0, 8).map((place) => (
+              <label
+                key={place.id}
+                className="flex cursor-pointer items-center rounded-full border border-black/10 px-3 py-1.5 text-xs has-[:checked]:border-foreground has-[:checked]:bg-foreground has-[:checked]:text-background dark:border-white/15"
+              >
+                <input
+                  type="radio"
+                  name="lodgingPlaceId"
+                  value={place.id}
+                  checked={stay === place.id}
+                  onChange={() => setStay(place.id)}
+                  className="sr-only"
+                />
+                {place.name.slice(0, 22)}
+                {place.rating !== undefined && (
+                  <span className="ml-1 opacity-70">★{place.rating.toFixed(1)}</span>
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading && candidates.length === 0 ? (
         <p className="py-3 text-sm text-zinc-500">후보를 불러오는 중…</p>

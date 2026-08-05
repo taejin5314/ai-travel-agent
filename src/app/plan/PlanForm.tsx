@@ -106,30 +106,6 @@ export function PlanForm() {
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className={labelClassName}>숙소 이름</span>
-        <input
-          type="text"
-          name="lodgingName"
-          required
-          placeholder="예: 호텔 오사카"
-          defaultValue={values?.lodgingName}
-          className={inputClassName}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1.5">
-        <span className={labelClassName}>숙소 지역</span>
-        <input
-          type="text"
-          name="lodgingArea"
-          required
-          placeholder="예: 난바"
-          defaultValue={values?.lodgingArea}
-          className={inputClassName}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1.5">
         <span className={labelClassName}>인원 수</span>
         <input
           type="number"
@@ -138,28 +114,6 @@ export function PlanForm() {
           min={1}
           required
           defaultValue={values?.partySize ?? 1}
-          className={inputClassName}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1.5">
-        <span className={labelClassName}>필수 방문지</span>
-        <textarea
-          name="mustVisit"
-          rows={2}
-          placeholder="쉼표 또는 줄바꿈으로 구분 (예: 오사카성, 도톤보리)"
-          defaultValue={values?.mustVisit}
-          className={inputClassName}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1.5">
-        <span className={labelClassName}>관심사</span>
-        <textarea
-          name="interests"
-          rows={2}
-          placeholder="쉼표 또는 줄바꿈으로 구분 (예: 음식, 쇼핑)"
-          defaultValue={values?.interests}
           className={inputClassName}
         />
       </label>
