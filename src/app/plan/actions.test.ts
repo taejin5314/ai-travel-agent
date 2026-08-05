@@ -249,7 +249,7 @@ describe("discoverCandidates", () => {
   it("ignores a destination the probe never found serviceable", async () => {
     // The picker cannot offer one, but the action is a public endpoint.
     const found = await discoverCandidates({ destinations: ["atlantis"] });
-    expect(found).toEqual({ attractions: [], restaurants: [] });
+    expect(found).toEqual({ attractions: [], restaurants: [], lodging: [] });
   });
 
   it("drops unavailable destinations but serves the rest", async () => {
@@ -268,5 +268,48 @@ describe("discoverCandidates", () => {
       limit: 3,
     });
     expect(found.attractions).toHaveLength(3);
+  });
+});
+
+describe("submitTripPreferences with minimal input", () => {
+  it("plans from dates and a destination alone", async () => {
+    // The whole point of the picker: no lodging name, no must-visit list, no
+    // interests. Everything else is recommended.
+    const result = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData({
+        startDate: "2026-08-01",
+        endDate: "2026-08-03",
+        destinations: ["osaka"],
+        partySize: "1",
+        pace: "balanced",
+      }),
+    );
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.planningNotice).toBeUndefined();
+      expect(result.itinerary?.some((day) => day.items.length > 0)).toBe(true);
+      expect(result.data.lodging).toBeUndefined();
+      expect(result.data.mustVisit).toEqual([]);
+    }
+  });
+
+  it("anchors on a lodging chosen by id", async () => {
+    const withStay = await submitTripPreferences(
+      initialPlanFormState,
+      buildFormData({
+        startDate: "2026-08-01",
+        endDate: "2026-08-02",
+        destinations: ["osaka"],
+        partySize: "1",
+        pace: "balanced",
+        lodgingPlaceId: "cross-hotel-osaka",
+      }),
+    );
+    expect(withStay.status).toBe("success");
+    if (withStay.status === "success") {
+      expect(withStay.data.lodgingPlaceId).toBe("cross-hotel-osaka");
+      expect(withStay.planningNotice).toBeUndefined();
+    }
   });
 });

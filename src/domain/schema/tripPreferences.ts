@@ -11,10 +11,23 @@ const isoDateSchema = z
 export const TripPreferencesSchema = z.object({
   startDate: isoDateSchema,
   endDate: isoDateSchema,
-  lodging: z.object({
-    name: z.string().trim().min(1, "lodging.name must not be blank"),
-    area: z.string().trim().min(1, "lodging.area must not be blank"),
-  }),
+  /**
+   * The lodging the traveller picked, by id. A name search is ambiguous —
+   * "호텔" on a Seoul trip resolved to a hotel in Kyoto and emptied the
+   * itinerary — so the picker hands over exactly which place it meant.
+   */
+  lodgingPlaceId: z.string().min(1).optional(),
+  /**
+   * Free-text lodging, kept for plans made before the picker existed and for
+   * callers that have a name but no id. Optional: a trip with no lodging at
+   * all plans without a daily anchor, which the planner already supports.
+   */
+  lodging: z
+    .object({
+      name: z.string().trim().min(1, "lodging.name must not be blank"),
+      area: z.string().trim().min(1, "lodging.area must not be blank"),
+    })
+    .optional(),
   /**
    * Where the trip goes. Required and non-empty: the planner used to fetch
    * every registered destination, which would have mixed Paris into an Osaka
@@ -22,8 +35,10 @@ export const TripPreferencesSchema = z.object({
    */
   destinations: z.array(z.string().min(1)).min(1),
   partySize: z.number().int().min(1),
-  mustVisit: z.array(z.string().min(1)),
-  interests: z.array(z.string()),
+  /** Typed place names. The picker supersedes this; kept for saved plans. */
+  mustVisit: z.array(z.string().min(1)).default([]),
+  /** Category keywords. Superseded by picking places directly. */
+  interests: z.array(z.string()).default([]),
   pace: z.enum(["relaxed", "balanced", "packed"]),
   /**
    * Cuisine ids offered by the chosen destinations. Not a global enum: what

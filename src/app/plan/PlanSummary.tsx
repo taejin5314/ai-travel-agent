@@ -193,12 +193,12 @@ export function PlanSummary({
             {data.destinations.map(destinationLabel).join(", ")}
           </dd>
         </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-zinc-600 dark:text-zinc-400">숙소</dt>
-          <dd>
-            {data.lodging.name} ({data.lodging.area})
-          </dd>
-        </div>
+        {data.lodging !== undefined && (
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-600 dark:text-zinc-400">숙소</dt>
+            <dd className="text-right">{data.lodging.name}</dd>
+          </div>
+        )}
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-600 dark:text-zinc-400">인원</dt>
           <dd>{data.partySize}명</dd>

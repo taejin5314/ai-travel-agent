@@ -118,6 +118,6 @@ describe("discoverPlaces", () => {
 
   it("returns empty lists rather than failing when nothing is asked for", async () => {
     const found = await discoverPlaces(ports(), []);
-    expect(found).toEqual({ attractions: [], restaurants: [] });
+    expect(found).toEqual({ attractions: [], restaurants: [], lodging: [] });
   });
 });
