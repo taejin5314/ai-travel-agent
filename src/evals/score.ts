@@ -28,6 +28,12 @@ export type Scorecard = {
   mealSlotsFilled: number;
   /** Lunch + dinner for every REQUESTED day, so a dropped day lowers the score. */
   mealSlotsExpected: number;
+  /**
+   * Every minute spent moving, walking and riding alike. The metric the day
+   * ordering optimises against — without it, "최고의 동선" was a claim with
+   * nothing behind it.
+   */
+  travelMinutes: number;
   /** Total minutes on foot across the trip. Lower is better. */
   walkingMinutes: number;
   /** The single longest walk. A trip is judged by its worst hop, not its average. */
@@ -87,6 +93,7 @@ export function scoreItinerary(
   let crossAreaHops = 0;
   let idleMinutes = 0;
   let mealSlotsFilled = 0;
+  let travelMinutes = 0;
   let walkingMinutes = 0;
   let longestWalkMinutes = 0;
   let estimatedLegs = 0;
@@ -108,6 +115,7 @@ export function scoreItinerary(
         crossAreaHops += 1;
       }
       if (activity.travel !== undefined) {
+        travelMinutes += activity.travel.minutes;
         if (activity.travel.estimated) {
           estimatedLegs += 1;
         }
@@ -144,6 +152,7 @@ export function scoreItinerary(
     mealSlotsExpected:
       tripLengthInDays(preferences.startDate, preferences.endDate) *
       Object.keys(MEAL_WINDOWS).length,
+    travelMinutes,
     walkingMinutes,
     longestWalkMinutes,
     estimatedLegs,

@@ -10,10 +10,11 @@
       "days": 2,
       "activities": 7,
       "crossAreaHops": 0,
-      "idleMinutes": 80,
+      "idleMinutes": 73,
       "mealSlotsFilled": 3,
       "mealSlotsExpected": 4,
-      "walkingMinutes": 8,
+      "travelMinutes": 109,
+      "walkingMinutes": 11,
       "longestWalkMinutes": 7,
       "estimatedLegs": 7
     }
@@ -29,10 +30,11 @@
       "days": 3,
       "activities": 15,
       "crossAreaHops": 1,
-      "idleMinutes": 231,
+      "idleMinutes": 250,
       "mealSlotsFilled": 6,
       "mealSlotsExpected": 6,
-      "walkingMinutes": 11,
+      "travelMinutes": 406,
+      "walkingMinutes": 27,
       "longestWalkMinutes": 9,
       "estimatedLegs": 15
     }
@@ -56,11 +58,12 @@
       "days": 3,
       "activities": 12,
       "crossAreaHops": 0,
-      "idleMinutes": 633,
+      "idleMinutes": 636,
       "mealSlotsFilled": 6,
       "mealSlotsExpected": 6,
-      "walkingMinutes": 20,
-      "longestWalkMinutes": 11,
+      "travelMinutes": 259,
+      "walkingMinutes": 17,
+      "longestWalkMinutes": 10,
       "estimatedLegs": 12
     }
   },
@@ -73,14 +76,15 @@
       "validatorPassed": true,
       "validatorErrors": [],
       "days": 3,
-      "activities": 14,
-      "crossAreaHops": 0,
-      "idleMinutes": 83,
-      "mealSlotsFilled": 5,
+      "activities": 18,
+      "crossAreaHops": 1,
+      "idleMinutes": 103,
+      "mealSlotsFilled": 6,
       "mealSlotsExpected": 6,
-      "walkingMinutes": 21,
-      "longestWalkMinutes": 9,
-      "estimatedLegs": 14
+      "travelMinutes": 446,
+      "walkingMinutes": 43,
+      "longestWalkMinutes": 18,
+      "estimatedLegs": 18
     }
   }
 ]

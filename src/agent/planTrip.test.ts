@@ -262,11 +262,17 @@ describe("planTrip area clustering", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       const ids = result.itinerary.days[0].activities.map((a) => a.placeId);
-      expect(ids).toEqual([
-        "osaka-castle",
-        "kuromon-market",
-        "fushimi-inari",
-      ]);
+      expect(ids).toHaveLength(3);
+      // The property this test was written for is grouping, not a fixed
+      // sequence: an alternating input list must not produce an alternating
+      // day. Order WITHIN an area is now decided by travel time, so asserting
+      // the exact order would pin down something the optimiser is meant to
+      // choose.
+      const areaById = new Map(fixture.map((p) => [p.id, p.area]));
+      const areas = ids.map((id) => areaById.get(id));
+      const runs = areas.filter((area, index) => area !== areas[index - 1]);
+      expect(runs).toHaveLength(new Set(areas).size);
+      expect(new Set(areas)).toEqual(new Set(["osaka", "kyoto"]));
     }
   });
 });
